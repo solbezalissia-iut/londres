@@ -44,15 +44,19 @@ Avec la synchronisation activée (voir plus bas), les comptes sont partagés ent
 
 En accès privé, touche **« Synchroniser mes appareils »** (en haut). Comptes, cases cochées, photos et billets sont alors envoyés dans ton dépôt GitHub, **chiffrés avec le code**, sur une branche à part nommée `donnees` (le site, publié depuis `main`, n'est pas touché). Chaque appareil synchronisé récupère automatiquement les changements des autres : à l'ouverture, au retour du réseau et quelques secondes après chaque modification. Sans réseau, tout reste utilisable et part dès que la connexion revient.
 
-Il faut une **clé d'accès GitHub** (à faire une seule fois, sur ordinateur) :
+**Mise en route, une seule fois** : il faut une clé d'accès GitHub, créée sur ordinateur.
 
 1. github.com → photo de profil → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
 2. Nom : « Carnet de voyage », expiration : 1 an.
 3. **Repository access** : *Only select repositories* → `londres`.
 4. **Permissions** → *Repository permissions* → **Contents : Read and write**.
-5. **Generate token**, copie la clé, puis colle-la dans la fenêtre de synchronisation de chaque appareil (envoie-la toi par AirDrop ou dans une note privée).
+5. **Generate token**, copie la clé et colle-la dans la fenêtre de synchronisation, sur n'importe quel appareil.
 
-La clé reste sur l'appareil où tu la colles ; elle n'est jamais mise sur GitHub.
+L'appli range alors la clé dans le site (`prive/sync.enc.json`), **chiffrée avec le code**. Sur tous les autres appareils, il suffit d'entrer le code : la synchronisation démarre toute seule (compter 1 à 2 minutes après la mise en route, le temps que GitHub publie le fichier).
+
+« Désactiver sur cet appareil » coupe la synchronisation sur un seul appareil. Pour la couper partout, supprime `prive/sync.enc.json` du dépôt et révoque la clé sur GitHub. Quand la clé expire, colle la nouvelle de la même façon.
+
+⚠️ La clé chiffrée est protégée par le code : avec un code de 8 chiffres, quelqu'un de très motivé pourrait la retrouver et modifier le dépôt. Un code plus long rend cela beaucoup plus difficile.
 
 ## Où sont stockés photos et billets ?
 

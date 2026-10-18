@@ -3,7 +3,7 @@
    - Ensuite : essaie le réseau (pour avoir les mises à jour), mais si la connexion
      ne répond pas en 3 secondes ou est absente, sert la copie enregistrée. */
 importScripts("voyages.js");
-const VERSION = "2026-10-18j";
+const VERSION = "2026-10-18k";
 const CACHE = "carnets-" + VERSION;
 const FILES = ["./", "index.html", "app.js", "icons.js", "voyages.js", "outils/carnet-build.js", "lib/jszip.min.js",
   "fonts/nunito-latin-500-normal.woff2", "fonts/nunito-latin-700-normal.woff2", "fonts/nunito-latin-800-normal.woff2",
@@ -15,7 +15,7 @@ self.addEventListener("install", e => {
     const c = await caches.open(CACHE);
     await c.addAll(FILES.map(f => new Request(f, { cache: "reload" })));
     // fichiers facultatifs de chaque voyage : détails chiffrés et photos du récap public
-    const extra = (self.VOYAGES || []).flatMap(v => ["prive/" + v + ".enc.json", "photos/" + v + "/photos.js"]);
+    const extra = (self.VOYAGES || []).flatMap(v => ["prive/" + v + ".enc.json", "photos/" + v + "/photos.js"]).concat(["prive/sync.enc.json"]);
     await Promise.all(extra.map(f => fetch(f, { cache: "reload" }).then(r => r.ok && c.put(f, r)).catch(() => {})));
     await self.skipWaiting();
   })());

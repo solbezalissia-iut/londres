@@ -914,6 +914,7 @@ async function unlock(code, remember) {
     TRIPS[i] = full; self.TRIPS[t.id] = full;
   }
   PRIV = true; SESSION_CODE = code;
+  await loadSyncKey(code);
   if (remember) ls.set("cv-code", code);
   setTimeout(() => runSync(), 500);
   if (trip) { trip = TRIPS.find(x => x.id === trip.id); await loadTripData(); }
@@ -1157,6 +1158,25 @@ async function runSync(manual) {
   })();
   return SYNC.running;
 }
+/* La clé d'accès est rangée dans le site (prive/sync.enc.json), chiffrée avec le code :
+   tout appareil qui entre le code retrouve la synchronisation sans rien coller. */
+async function publishSyncKey() {
+  const c = syncCfg(), code = SESSION_CODE || ls.get("cv-code"); if (!c || !code) return;
+  const repo = await (await gh("")).json(), main = repo.default_branch || "main";
+  const cur = await gh(`/contents/prive/sync.enc.json?ref=${main}`);
+  const sha = cur.ok ? (await cur.json()).sha : null;
+  const enc = await CarnetBuild.encrypt(JSON.stringify({ token: c.token, owner: c.owner, repo: c.repo }), code);
+  const r = await gh("/contents/prive/sync.enc.json", { method: "PUT", body: JSON.stringify({ message: "Synchronisation : clé chiffrée", content: b64text(JSON.stringify(enc)), branch: main, ...(sha ? { sha } : {}) }) });
+  if (!r.ok) throw new Error("github " + r.status);
+}
+async function loadSyncKey(code) {
+  if (syncCfg() || ls.get("cv-sync-off")) return;
+  try {
+    const r = await fetch("prive/sync.enc.json", { cache: "no-cache" }); if (!r.ok) return;
+    const o = JSON.parse(await CarnetBuild.decrypt(await r.json(), code));
+    if (o && o.token) ls.set("cv-sync", o);
+  } catch (e) {}
+}
 function scheduleSync() { if (!syncCfg() || !PRIV) return; clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => runSync(), 2500); }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") scheduleSync(); });
 window.addEventListener("online", () => scheduleSync());
@@ -1187,11 +1207,15 @@ $("#sEnable").onclick = async ev => {
   ls.set("cv-sync", { token, ...defaultRepo() }); SYNC.key = null;
   $("#sErr").textContent = "Vérification…";
   await runSync(true);
-  if (SYNC.state === "ok") { $("#sdlg").close(); toast("Synchronisation activée sur cet appareil"); }
+  if (SYNC.state === "ok") {
+    ls.set("cv-sync-off", null);
+    try { await publishSyncKey(); $("#sdlg").close(); toast("Synchronisation activée : les autres appareils n'auront qu'à entrer le code"); }
+    catch (e) { $("#sdlg").close(); toast("Synchronisation activée sur cet appareil (clé non enregistrée dans le site)"); }
+  }
   else { $("#sErr").textContent = SYNC.err; ls.set("cv-sync", null); SYNC.state = "off"; updateSyncChip(); }
 };
 $("#sNow").onclick = () => runSync(true);
-$("#sDisable").onclick = () => { ls.set("cv-sync", null); SYNC.key = null; SYNC.state = "off"; updateSyncChip(); $("#sdlg").close(); toast("Synchronisation désactivée sur cet appareil"); };
+$("#sDisable").onclick = () => { ls.set("cv-sync", null); ls.set("cv-sync-off", true); SYNC.key = null; SYNC.state = "off"; updateSyncChip(); $("#sdlg").close(); toast("Synchronisation désactivée sur cet appareil"); };
 
 /* ---------- interactions ---------- */
 function bindView() {
