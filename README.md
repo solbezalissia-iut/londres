@@ -46,7 +46,7 @@ Les billets déjà enregistrés avec l'ancienne version du site sont repris auto
 
 ## Récap public et accès privé
 
-- **Sans code**, tout le monde voit le récap : les voyages, les activités de chaque jour et les photos que tu as choisi de publier. Pas d'horaires, d'hôtel, de vols, de trajets, de prix ni de réservations.
+- **Sans code**, tout le monde voit un récap tout simple : les activités et les monuments de chaque voyage, rangés par thème, et les photos que tu as choisi de publier. Aucune date, aucun horaire, ni hôtel, vols, trajets, prix ou réservations.
 - **Avec le code** (bouton « Accès privé »), tu retrouves tout : programme détaillé, billets, budget, comptes, convertisseur, infos. Coche « Rester déverrouillé sur cet appareil » pour ne pas le retaper (bouton cadenas pour verrouiller).
 - Les détails sont dans `prive/<voyage>.enc.json`, **chiffrés avec le code** (AES-256, clé dérivée par PBKDF2). Le code n'est écrit nulle part dans le dépôt.
 

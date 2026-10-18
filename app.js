@@ -29,7 +29,7 @@ const RULES = [
   [/déjeuner|dîner/, "tools-kitchen-2"], [/cakes|gâteau|café/, "cake"], [/fleur|flower/, "flower"],
   [/sky garden|horizon 22|garden at 120|canary wharf/, "building-skyscraper"],
   [/museum|gallery|collection|tate/, "building-bank"], [/bridge/, "building-bridge"],
-  [/st paul|dunstan|cathedral/, "building-church"], [/tour de londres|garde|palace|big ben/, "building-castle"],
+  [/st paul|dunstan|cathedral/, "building-church"], [/tour de londres|relève de la garde|palace|big ben/, "building-castle"],
   [/de nuit/, "moon-stars"], [/primrose|coucher/, "sunset"], [/street arches|leake/, "spray"],
   [/outernet/, "device-tv"], [/babylon/, "confetti"],
   [/market|marché/, "shopping-bag"], [/harrods|hamleys|disney|selfridges|lego|westfield|shopping|boutiques|bagages/, "building-store"],
@@ -60,6 +60,7 @@ function range(a, b) {
 }
 const dayDiff = (a, b) => Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
 function tripState(t) {
+  if (!t.start) return { k: "soon", txt: "" };
   const today = isoToday();
   if (today < t.start) { const n = dayDiff(today, t.start); return { k: "soon", txt: n === 1 ? "Départ demain" : `Départ dans ${n} jours` }; }
   if (today > t.end) return { k: "past", txt: "Voyage terminé" };
@@ -132,7 +133,7 @@ const PRIVATE_SECTIONS = ["billets", "budget", "comptes", "infos"];
 const pubPhotos = id => ((self.PUBPHOTOS || {})[id] || []).map((x, i) => ({ id: "pub:" + id + ":" + x.f, key: id + "|" + x.k, src: "photos/" + id + "/" + encodeURIComponent(x.f), caption: x.c || "", pub: true, pubName: x.f, created: i }));
 const tKey = (d, s) => trip.id + "|" + d.id + "|" + s.n;
 const ticketsFor = k => TICKETS.filter(t => t.key === k);
-const photosFor = k => PHOTOS.filter(p => p.key === k).sort((a, b) => a.created - b.created);
+const photosFor = k => PHOTOS.filter(p => k === "*" || p.key === k).sort((a, b) => a.created - b.created);
 
 async function loadTripData() {
   let local = []; TICKETS = [];
@@ -168,6 +169,7 @@ async function render() {
   if (route.home) { document.body.classList.remove("intrip"); return renderHome(); }
   if (!trip || trip.id !== route.trip) { trip = TRIPS.find(t => t.id === route.trip); await loadTripData(); }
   document.body.classList.add("intrip");
+  if (!PRIV && trip.locked) { section = "public"; renderTrip(); return; }
   let sec = route.sec;
   if (!sec) { const st = tripState(trip); sec = st.day || ls.get("cv-last-" + trip.id) || trip.days[0].id; history.replaceState(null, "", href(sec)); }
   const di = trip.days.findIndex(d => d.id === sec);
@@ -197,35 +199,36 @@ async function renderHome() {
     ph.sort((a, b) => b.created - a.created);
     const names = new Set(ph.map(p => p.pubName).filter(Boolean));
     const all = ph.concat(pubPhotos(t.id).filter(p => !names.has(p.pubName)));
-    stats[t.id] = { photos: all.length, cover: all[0] || null, stops: t.days.reduce((a, d) => a + d.stops.length, 0) };
+    stats[t.id] = { photos: all.length, cover: all[0] || null, stops: placesOf(t).length };
   }));
   const order = TRIPS.slice().sort((a, b) => {
     const pa = tripState(a).k === "past", pb = tripState(b).k === "past";
-    return pa !== pb ? (pa ? 1 : -1) : (pa ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start));
+    return pa !== pb ? (pa ? 1 : -1) : (pa ? (b.start || "").localeCompare(a.start || "") : (a.start || "").localeCompare(b.start || ""));
   });
   const next = order.find(t => tripState(t).k !== "past");
   const hi = next ? (tripState(next).k === "now" ? `Bon voyage à ${next.title} !` : `Bonjour ! ${tripState(next).txt}`) : "Bonjour !";
   $("#app").innerHTML = `
-   <header class="hello"><div><p class="hi">${esc(PRIV ? hi : "Le récap de nos voyages")}</p><h1>${PRIV ? "Mes voyages" : "Nos voyages"}</h1></div><div class="hacts">${netPill()}${lockBtn()}</div></header>
+   <header class="hello"><div><p class="hi">${esc(PRIV ? hi : "Nos souvenirs de voyage")}</p><h1>${PRIV ? "Mes voyages" : "Nos voyages"}</h1></div><div class="hacts">${netPill()}${lockBtn()}</div></header>
    <div class="trips">${order.map(t => {
      const st = tripState(t), s = stats[t.id];
      return `<a class="trip card ${st.k}" href="#/${esc(t.id)}">
        <div class="cover">${s.cover ? `<img alt="" data-cover="${s.cover.id}">` : `<div class="mosaic" aria-hidden="true">${highlights(t).map(n => tile(n)).join("")}</div>`}</div>
        <div class="tinfo">
-         <div class="trow"><h2>${esc(t.title)}</h2><span class="pill">${esc(st.k === "soon" ? st.txt.replace("Départ d", "D") : st.txt)}</span></div>
+         ${PRIV ? `<div class="trow"><h2>${esc(t.title)}</h2><span class="pill">${esc(st.k === "soon" ? st.txt.replace("Départ d", "D") : st.txt)}</span></div>
          <div class="tmeta">${ic("calendar")}${esc(range(t.start, t.end))}${t.country ? ", " + esc(t.country) : ""}</div>
          ${t.summary ? `<p>${esc(t.summary)}</p>` : ""}
-         <div class="chips"><span>${plural(t.days.length, "jour")}</span><span>${plural(s.stops, "étape")}</span><span>${plural(s.photos, "photo")}</span></div>
+         <div class="chips"><span>${plural(t.days.length, "jour")}</span><span>${plural(s.stops, "étape")}</span><span>${plural(s.photos, "photo")}</span></div>`
+         : `<h2>${esc(t.title)}</h2>${t.country ? `<div class="tmeta">${ic("map-pin")}${esc(t.country)}</div>` : ""}${t.summary ? `<p>${esc(t.summary)}</p>` : ""}`}
        </div></a>`;
    }).join("")}</div>
-   ${PRIV ? `<section class="howto card">${tile("plus", "lilac")}<div><h2>Ajouter un voyage</h2><p>Sur GitHub, copie le fichier <b>voyages/modele.js</b> sous un nouveau nom (par exemple <b>voyages/rome.js</b>), remplis-le, puis ajoute son nom dans <b>voyages.js</b>. Le nouveau voyage apparaît ici une à deux minutes plus tard. Pour modifier un programme, utilise la page <a href="outils/">Modifier un voyage</a>.</p></div></section>
-   <footer>Les photos, billets et cases cochées sont enregistrés uniquement sur cet appareil.</footer>` : `<footer>Les activités et les photos de chaque voyage. Les horaires et les réservations sont réservés aux voyageurs.</footer>`}`;
+   ${PRIV ? `<section class="howto card">${tile("plus", "lilac")}<div><h2>Ajouter un voyage</h2><p>Va sur la page <a href="outils/">Modifier un voyage</a> : pars du modèle, remplis-le, et la page prépare le fichier à déposer sur GitHub. Ajoute ensuite son nom dans <b>voyages.js</b>.</p></div></section>
+   <footer>Les photos, billets et cases cochées sont enregistrés uniquement sur cet appareil.</footer>` : ""}`;
   $$("img[data-cover]").forEach(img => { const id = img.dataset.cover; for (const t of TRIPS) { const c = stats[t.id].cover; if (c && c.id === id) img.src = c.src || objURL("cover:" + id, c.thumb || c.blob); } });
 }
 /* six étapes phares aux icônes différentes, pour la couverture sans photo */
 function highlights(t) {
   const out = [], seen = new Set(["map-pin", "plane", "car", "bed", "train", "tools-kitchen-2", "sparkles"]);
-  for (const pass of [1, 0]) for (const d of t.days) for (const s of d.stops) {
+  for (const pass of [1, 0]) for (const s of placesOf(t)) {
     if (out.length >= 6) break;
     if (pass && !s.major) continue;
     const n = stopIcon(s); if (!seen.has(n)) { seen.add(n); out.push(n); }
@@ -242,6 +245,14 @@ window.addEventListener("online", updateNet); window.addEventListener("offline",
 const factIcon = l => /hôtel|logement/i.test(l) ? ["bed", "lilac"] : /arriv/i.test(l) ? ["plane-arrival", "sky"] : /départ|retour/i.test(l) ? ["plane-departure", "peach"] : ["info-circle", "mint"];
 function renderTrip() {
   const t = trip, st = tripState(t);
+  if (section === "public") {
+    document.title = t.title + " · Nos voyages"; setTheme();
+    $("#app").innerHTML = `
+     <div class="tripbar"><a class="iconbtn" href="#/" aria-label="Retour aux voyages">${I.back}</a><span class="crumb">Nos voyages</span>${netPill()}${lockBtn(true)}</div>
+     <header class="hero card pubhero"><h1>${esc(t.title)}</h1>${t.country ? `<div class="hdates">${esc(t.country)}</div>` : ""}${t.summary ? `<p class="daysub">${esc(t.summary)}</p>` : ""}</header>
+     ${publicView()}`;
+    hydrate($("#app")); return;
+  }
   document.title = t.title + " · Mes voyages";
   setTheme();
   const counts = { photos: PHOTOS.length, billets: TICKETS.length };
@@ -806,6 +817,34 @@ function infosView() {
   </section>${sidebar()}</main>`;
 }
 
+/* ---------- récap public : activités et monuments, sans dates ni horaires ---------- */
+const CATS = [
+  ["Monuments", "building-castle", "butter", ["building-castle", "building-church", "building-bridge", "building-skyscraper", "crown", "building-carousel", "moon-stars"]],
+  ["Musées", "building-bank", "lilac", ["building-bank"]],
+  ["Quartiers", "star", "pink", ["star"]],
+  ["Parcs et panoramas", "trees", "mint", ["trees", "sunset"]],
+  ["Marchés et boutiques", "shopping-bag", "peach", ["shopping-bag", "building-store", "cake", "flower"]],
+  ["Expériences", "sparkles", "sky", []]
+];
+const placesOf = t => t.places || (t.days || []).flatMap(d => d.stops);
+function publicView() {
+  const t = trip, groups = CATS.map(c => [c, []]);
+  for (const p of placesOf(t)) {
+    const n = stopIcon(p), g = groups.find(([c]) => c[3].includes(n)) || groups[groups.length - 1];
+    g[1].push(p);
+  }
+  const card = p => {
+    const key = t.id + "|" + p.k, ph = photosFor(key), n = stopIcon(p);
+    return ph.length
+      ? `<button class="place card hasph" data-ph="${ph[0].id}" data-pk="${esc(key)}"><span class="pimg"><img alt="" data-thumb="${ph[0].id}" loading="lazy"></span><b>${esc(p.n)}</b></button>`
+      : `<a class="place card" href="${mapsSearch(t, p.q)}" target="_blank" rel="noopener">${tile(n, TONE[n], "big")}<b>${esc(p.n)}</b></a>`;
+  };
+  return `<main class="full"><section style="min-width:0">
+   ${PHOTOS.length ? `<h2 class="pubh">${tile("camera", "pink")}Nos photos</h2><div class="pgrid pubgrid">${PHOTOS.slice().sort((a, b) => a.created - b.created).map(p => `<button class="pth" data-ph="${p.id}" data-pk="*" aria-label="Voir la photo"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}</div>` : ""}
+   ${groups.filter(([, l]) => l.length).map(([c, l]) => `<h2 class="pubh">${tile(c[1], c[2])}${esc(c[0])}</h2><div class="places">${l.map(card).join("")}</div>`).join("")}
+  </section></main>`;
+}
+
 /* ---------- accès privé (code) ----------
    Les détails de chaque voyage sont dans prive/<id>.enc.json, chiffrés avec le code (AES-GCM).
    Sans le code, le site n'affiche que le récap public : activités et photos. */
@@ -962,7 +1001,7 @@ function toast(msg, ms) { const t = $("#toast"); t.textContent = msg; t.hidden =
 /* ---------- démarrage ---------- */
 (async () => {
   await Promise.all((self.VOYAGES || []).flatMap(id => [loadScript("voyages/" + encodeURIComponent(id) + ".js"), loadScript("photos/" + encodeURIComponent(id) + "/photos.js")]));
-  TRIPS = (self.VOYAGES || []).map(id => self.TRIPS && self.TRIPS[id]).filter(t => t && t.days && t.days.length);
+  TRIPS = (self.VOYAGES || []).map(id => self.TRIPS && self.TRIPS[id]).filter(t => t && ((t.days && t.days.length) || (t.places && t.places.length)));
   if (!TRIPS.length) { $("#app").innerHTML = `<header class="homehead"><div><h1>Mes voyages</h1><p>Aucun voyage trouvé. Vérifie la liste dans voyages.js.</p></div></header>`; return; }
   try { await DB.open(); await migrateOld(); } catch (e) { DB.ok = false; }
   const saved = ls.get("cv-code");

@@ -33,26 +33,24 @@
   }
   /* récap public : uniquement les activités, sans horaires, adresses, trajets ni réservations */
   const LOGI = /aéroport|transfert|check-in|hôtel →|→ hôtel|train euston|navette|retour vers londres|arrivée à gatwick|décollage|bagages/i;
-  const PRIVATE_WORDS = /hôtel|acton|\d{1,2}h\d{0,2}|réserv|billet|créneau|qr code|£|jsp|vérifie/i;
-  const clean = d => (d || "").split(/(?<=[.!?])\s+/).filter(x => x && !PRIVATE_WORDS.test(x)).join(" ");
+  /* récap public : seulement les activités et les monuments, sans dates, horaires,
+     adresses, trajets, repas ni réservations */
+  const SKIP = /déjeuner|dîner|temps libre|soirée|balade libre|uber boat/i;
   function toPublic(t) {
-    return {
-      id: t.id, title: t.title, country: t.country, color: t.color, accent: t.accent,
-      start: t.start, end: t.end, city: t.city, summary: t.summary, locked: true,
-      days: t.days.map(d => ({
-        id: d.id, date: d.date, dow: d.dow, label: d.label, title: d.title, c: d.c, light: d.light,
-        sub: d.pubsub || clean(d.sub),
-        stops: d.stops.filter(s => s.pub !== 0 && !LOGI.test(s.n)).map(s => {
-          const o = { n: s.n, q: s.q };
-          const dd = clean(s.d); if (dd) o.d = dd;
-          if (s.major) o.major = 1; if (s.ic) o.ic = s.ic;
-          return o;
-        })
-      }))
-    };
+    const seen = [], places = [];
+    for (const d of t.days) for (const s of d.stops) {
+      if (s.pub === 0 || LOGI.test(s.n) || SKIP.test(s.n)) continue;
+      const low = s.n.toLowerCase();
+      if (seen.some(x => x.startsWith(low) || low.startsWith(x))) continue;
+      seen.push(low);
+      const o = { n: s.n, q: s.q, k: d.id + "|" + s.n };
+      if (s.major) o.major = 1; if (s.ic) o.ic = s.ic;
+      places.push(o);
+    }
+    return { id: t.id, title: t.title, country: t.country, color: t.color, accent: t.accent, city: t.city, summary: t.pubsummary || t.summary, locked: true, places };
   }
   function publicFile(t) {
-    return "/* Récap public de « " + t.title + " » : créé automatiquement par outils/index.html.\n   Les détails (horaires, réservations, trajets) sont dans prive/" + t.id + ".enc.json, chiffrés. */\n" +
+    return "/* Récap public de « " + t.title + " » : créé automatiquement par outils/index.html.\n   Les détails (dates, horaires, réservations, trajets) sont dans prive/" + t.id + ".enc.json, chiffrés. */\n" +
       "(self.TRIPS = self.TRIPS || {})[" + JSON.stringify(t.id) + "] = " + JSON.stringify(toPublic(t), null, 1) + ";\n";
   }
   root.CarnetBuild = { encrypt, decrypt, evalTrip, toPublic, publicFile, ITER };
