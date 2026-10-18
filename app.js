@@ -103,8 +103,8 @@ const DB = {
     });
   },
   byTrip(store, trip) { return this.run(store, "readonly", s => s.index("trip").getAll(trip)); },
-  put(store, v) { return this.run(store, "readwrite", s => s.put(v)); },
-  del(store, id) { return this.run(store, "readwrite", s => s.delete(id)); }
+  put(store, v, fromSync) { if (!fromSync) { v.upd = Date.now(); setTimeout(() => typeof scheduleSync === "function" && scheduleSync(), 0); } return this.run(store, "readwrite", s => s.put(v)); },
+  del(store, id, fromSync) { if (!fromSync) { const t = ls.get("cv-tomb") || {}; t[id] = Date.now(); ls.set("cv-tomb", t); setTimeout(() => typeof scheduleSync === "function" && scheduleSync(), 0); } return this.run(store, "readwrite", s => s.delete(id)); }
 };
 
 /* Reprend les billets de l'ancien site « Carnet de Londres » (base londres-2027) */
@@ -209,6 +209,7 @@ async function renderHome() {
   const hi = next ? (tripState(next).k === "now" ? `Bon voyage à ${next.title} !` : `Bonjour ! ${tripState(next).txt}`) : "Bonjour !";
   $("#app").innerHTML = `
    <header class="hello"><div><p class="hi">${esc(PRIV ? hi : "Nos souvenirs de voyage")}</p><h1>${PRIV ? "Mes voyages" : "Nos voyages"}</h1></div><div class="hacts">${netPill()}${lockBtn()}</div></header>
+   ${PRIV ? `<div style="margin-top:10px">${syncChip()}</div>` : ""}
    <div class="trips">${order.map(t => {
      const st = tripState(t), s = stats[t.id];
      return `<a class="trip card ${st.k}" href="#/${esc(t.id)}">
@@ -259,6 +260,7 @@ function renderTrip() {
   const view = section === "locked" ? lockedView() : section === "programme" ? dayView() : section === "photos" ? photosView() : section === "billets" ? billetsView() : section === "budget" ? budgetView() : section === "comptes" ? comptesView() : infosView();
   $("#app").innerHTML = `
    <div class="tripbar"><a class="iconbtn" href="#/" aria-label="Retour aux voyages">${I.back}</a><span class="crumb">${PRIV ? "Mes voyages" : "Nos voyages"}</span>${netPill()}${lockBtn(true)}</div>
+   ${syncChip() ? `<div style="margin-top:12px">${syncChip()}</div>` : ""}
    <header class="hero card">
      <div class="htop"><div><h1>${esc(t.title)}</h1><div class="hdates">${esc(range(t.start, t.end))}</div></div><span class="pill">${esc(st.txt)}</span></div>
      ${!PRIV && t.summary ? `<p class="daysub">${esc(t.summary)}</p>` : ""}
@@ -565,7 +567,7 @@ function renderPending() {
   $("#tFiles").innerHTML = pendingFiles.map((f, i) => `<li>${esc(f.name)} <span class="small">(${Math.max(1, Math.round(f.blob.size / 1024))} Ko)</span> <button type="button" class="link danger" data-rm="${i}">Retirer</button></li>`).join("");
   $$("[data-rm]", $("#tFiles")).forEach(b => b.onclick = () => { pendingFiles.splice(+b.dataset.rm, 1); renderPending(); });
 }
-$("#tFile").onchange = e => { [...e.target.files].forEach(f => pendingFiles.push({ name: f.name, type: f.type || "application/octet-stream", blob: f })); e.target.value = ""; renderPending(); };
+$("#tFile").onchange = e => { [...e.target.files].forEach(f => pendingFiles.push({ name: f.name, type: f.type || "application/octet-stream", blob: f, fid: uid("f") })); e.target.value = ""; renderPending(); };
 $("#tCancel").onclick = () => dlg.close();
 $("#tForm").onsubmit = async e => {
   e.preventDefault();
@@ -666,7 +668,17 @@ const getC = () => {
   exp.forEach(e => { const x = e.paidRef != null && (trip.paid || [])[e.paidRef]; if (x && (e.amount !== x[2] || e.title !== x[0])) { e.amount = x[2]; e.title = x[0]; } });
   return { people: c.people || [], exp, rate: getRate().v };
 };
-const setC = c => ls.set(CK(), c);
+const setC = c => {
+  const prev = ls.get(CK()) || {}, now = Date.now(), strip = o => JSON.stringify({ ...o, upd: 0 }), tomb = ls.get("cv-tomb") || {};
+  for (const k of ["exp", "people"]) {
+    const old = new Map((prev[k] || []).map(x => [x.id, x]));
+    (c[k] || []).forEach(x => { const o = old.get(x.id); x.upd = !o || strip(o) !== strip(x) ? now : (o.upd || x.upd || now); });
+    old.forEach((o, id) => { if (!(c[k] || []).some(x => x.id === id)) tomb[id] = now; });
+  }
+  ls.set("cv-tomb", tomb);
+  ls.set(CK(), { people: c.people, exp: c.exp });
+  scheduleSync();
+};
 const toEur = (e, c) => e.cur === "£" ? e.amount * c.rate : e.amount;
 const nameOf = (c, id) => (c.people.find(p => p.id === id) || { name: "?" }).name;
 const fmtAmt = (n, cur) => cur === "£" ? "£" + n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : euro(n);
@@ -759,7 +771,7 @@ function comptesView() {
      <form id="cAdd" style="display:flex;gap:8px;flex-wrap:wrap"><input id="cNew" placeholder="Ajouter un voyageur" autocomplete="off" style="font:inherit;font-size:16px;padding:10px 12px;border:0;border-radius:14px;background:var(--bg);color:var(--fg);flex:1;min-width:160px"><button class="btn" type="submit">${ic("user-plus")}Ajouter</button></form>
      <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:14px;font-weight:700">1 £ =
        <input id="cRate" type="number" step="0.01" min="0.5" max="3" value="${c.rate}" style="font:inherit;font-size:16px;width:90px;padding:8px 10px;border:0;border-radius:12px;background:var(--bg);color:var(--fg)"> €</label>
-     <p class="small" style="margin-top:6px">Même taux que le convertisseur. Les comptes sont enregistrés sur cet appareil et inclus dans la sauvegarde.</p>
+     <p class="small" style="margin-top:6px">Même taux que le convertisseur. Avec la synchronisation activée, les comptes sont partagés entre tes appareils.</p>
    </div>
   </section></main>`;
 }
@@ -901,8 +913,9 @@ async function unlock(code, remember) {
     const full = CarnetBuild.evalTrip(text);
     TRIPS[i] = full; self.TRIPS[t.id] = full;
   }
-  PRIV = true;
+  PRIV = true; SESSION_CODE = code;
   if (remember) ls.set("cv-code", code);
+  setTimeout(() => runSync(), 500);
   if (trip) { trip = TRIPS.find(x => x.id === trip.id); await loadTripData(); }
   refreshRate();
 }
@@ -918,7 +931,7 @@ $("#uForm").onsubmit = async ev => {
   catch (e) { $("#uErr").textContent = e.message === "code" ? "Code incorrect." : "Impossible de charger les détails. Ouvre le site une fois avec du réseau, puis réessaie."; }
   btn.disabled = false;
 };
-function lock() { ls.set("cv-code", null); location.reload(); }
+function lock() { ls.set("cv-code", null); SESSION_CODE = null; location.reload(); }
 
 /* ---------- photos du récap public ----------
    Dans la visionneuse, « Récap public » marque une photo ; « Préparer l'envoi » crée un .zip
@@ -992,12 +1005,201 @@ function bindConv(root) {
   });
 }
 
+/* ---------- synchronisation entre appareils ----------
+   Coffre : la branche « donnees » du dépôt GitHub (le site, lui, est publié depuis « main »).
+   Tout y est chiffré avec le code : comptes, cases cochées, photos et billets.
+   Chaque appareil a besoin d'une clé d'accès GitHub (saisie une fois, gardée sur l'appareil). */
+let SESSION_CODE = null;
+const SYNC = { key: null, salt: null, state: "off", last: 0, err: "", timer: null, running: null };
+const syncCfg = () => { const c = ls.get("cv-sync"); return c && c.token ? c : null; };
+function defaultRepo() {
+  const h = location.hostname, m = h.match(/^([^.]+)\.github\.io$/i);
+  return { owner: m ? m[1] : "solbezalissia-iut", repo: (location.pathname.split("/").filter(Boolean)[0]) || "londres" };
+}
+async function gh(path, opts = {}) {
+  const c = syncCfg(); if (!c) throw new Error("off");
+  const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}${path}`, {
+    ...opts, cache: "no-store",
+    headers: { Authorization: "Bearer " + c.token, Accept: opts.raw ? "application/vnd.github.raw+json" : "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", ...(opts.body ? { "Content-Type": "application/json" } : {}) }
+  });
+  return r;
+}
+const BR = "donnees";
+const b64text = s => CarnetBuild.b64(new TextEncoder().encode(s));
+async function ghGet(path, raw) {
+  const r = await gh(`/contents/${path}?ref=${BR}`, { raw });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("github " + r.status);
+  if (raw) return { text: await r.text() };
+  const j = await r.json();
+  return { sha: j.sha, text: new TextDecoder().decode(CarnetBuild.unb64((j.content || "").replace(/\s/g, ""))) };
+}
+async function ghPut(path, text, sha, msg) {
+  const r = await gh(`/contents/${path}`, { method: "PUT", body: JSON.stringify({ message: msg || "Synchronisation", content: b64text(text), branch: BR, ...(sha ? { sha } : {}) }) });
+  if (r.status === 409 || r.status === 422) { const e = new Error("conflit"); e.conflict = true; throw e; }
+  if (!r.ok) throw new Error("github " + r.status);
+  return (await r.json()).content.sha;
+}
+async function ensureBranch() {
+  const r = await gh(`/branches/${BR}`);
+  if (r.ok) return;
+  if (r.status === 401 || r.status === 403) throw new Error("acces");
+  const c = syncCfg(), repo = await (await gh("")).json();
+  const m = await gh(`/git/ref/heads/${repo.default_branch || "main"}`); if (!m.ok) throw new Error("acces");
+  const sha = (await m.json()).object.sha;
+  const cr = await gh("/git/refs", { method: "POST", body: JSON.stringify({ ref: "refs/heads/" + BR, sha }) });
+  if (!cr.ok && cr.status !== 422) throw new Error("acces");
+}
+async function syncKey() {
+  if (SYNC.key) return SYNC.key;
+  const code = SESSION_CODE || ls.get("cv-code"); if (!code) throw new Error("code");
+  let f = await ghGet("sync/cle.json");
+  if (!f) { const salt = CarnetBuild.newSalt(); try { await ghPut("sync/cle.json", JSON.stringify({ salt }), null, "Synchronisation : création du coffre"); } catch (e) { if (!e.conflict) throw e; } f = await ghGet("sync/cle.json"); }
+  SYNC.salt = JSON.parse(f.text).salt;
+  SYNC.key = await CarnetBuild.deriveKey(code, SYNC.salt);
+  return SYNC.key;
+}
+const sealJSON = async o => JSON.stringify(await CarnetBuild.sealText(SYNC.key, JSON.stringify(o)));
+const openJSON = async t => JSON.parse(await CarnetBuild.openText(SYNC.key, JSON.parse(t)));
+async function upBlob(tid, fid, blob) {
+  const sealed = await CarnetBuild.seal(SYNC.key, new Uint8Array(await blob.arrayBuffer()));
+  try { await ghPut(`sync/${tid}/${fid}.bin`, JSON.stringify({ ...sealed, type: blob.type }), null, "Synchronisation : fichier"); }
+  catch (e) { if (!e.conflict) throw e; } // déjà envoyé
+}
+async function downBlob(tid, fid) {
+  const f = await ghGet(`sync/${tid}/${fid}.bin`, true); if (!f) return null;
+  const o = JSON.parse(f.text); return new Blob([await CarnetBuild.open(SYNC.key, o)], { type: o.type || "application/octet-stream" });
+}
+function mergeList(la, ra, tomb) { // garder la version la plus récente de chaque élément, sans les supprimés
+  const out = new Map();
+  for (const x of [...(ra || []), ...(la || [])]) { if (!x || !x.id) continue; const cur = out.get(x.id); out.set(x.id, cur && (cur.upd || 0) > (x.upd || 0) ? cur : x); }
+  return [...out.values()].filter(x => !(tomb[x.id] && tomb[x.id] >= (x.upd || 0)));
+}
+const PHOTO_META = ["id", "trip", "key", "day", "caption", "wantPub", "pubName", "created", "taken", "w", "h", "name", "upd"];
+const pick = (o, ks) => Object.fromEntries(ks.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
+async function syncTrip(t) {
+  const path = `sync/${t.id}.json`;
+  const rf = await ghGet(path);
+  const R = rf ? await openJSON(rf.text) : { comptes: { people: [], exp: [] }, resa: {}, photos: {}, tickets: {}, tomb: {} };
+  // tombes (suppressions) : union
+  const tomb = { ...(R.tomb || {}) }; Object.entries(ls.get("cv-tomb") || {}).forEach(([k, v]) => { if (!tomb[k] || tomb[k] < v) tomb[k] = v; });
+  // comptes
+  const lc = ls.get("cv-comptes-" + t.id) || {};
+  const comptes = { people: mergeList(lc.people, R.comptes && R.comptes.people, tomb), exp: mergeList(lc.exp, R.comptes && R.comptes.exp, tomb) };
+  // cases « à réserver »
+  const lr = ls.get("cv-resa-" + t.id) || {}, lu = ls.get("cv-resaupd-" + t.id) || {}, resa = { ...(R.resa || {}) };
+  Object.keys(lr).forEach(k => { const u = lu[k] || 0; if (!resa[k] || resa[k][1] < u || (!lu[k] && !resa[k])) resa[k] = [!!lr[k], u]; });
+  // photos
+  const localP = await DB.byTrip("photos", t.id), photos = {};
+  for (const p of localP) {
+    if (tomb[p.id] && tomb[p.id] >= (p.upd || 0)) { await DB.del("photos", p.id, true); continue; }
+    const rm = (R.photos || {})[p.id];
+    if (!rm) { await upBlob(t.id, p.id, p.blob); photos[p.id] = pick(p, PHOTO_META); }
+    else if ((rm.upd || 0) > (p.upd || 0)) { Object.assign(p, rm); await DB.put("photos", p, true); photos[p.id] = rm; }
+    else photos[p.id] = pick(p, PHOTO_META);
+  }
+  for (const [id, rm] of Object.entries(R.photos || {})) {
+    if (photos[id] || (tomb[id] && tomb[id] >= (rm.upd || 0))) continue;
+    const blob = await downBlob(t.id, id); if (!blob) continue;
+    let thumb = null; try { const [img, u] = await loadImg(blob); thumb = await toJpeg(img, 360, .72); URL.revokeObjectURL(u); } catch (e) {}
+    await DB.put("photos", { ...rm, trip: t.id, blob, thumb }, true); photos[id] = rm;
+  }
+  // billets
+  const localT = await DB.byTrip("tickets", t.id), tickets = {};
+  const tMeta = x => ({ ...pick(x, ["id", "trip", "key", "title", "ref", "note", "created", "upd"]), files: (x.files || []).map(f => ({ name: f.name, type: f.type, fid: f.fid })) });
+  for (const x of localT) {
+    if (tomb[x.id] && tomb[x.id] >= (x.upd || 0)) { await DB.del("tickets", x.id, true); continue; }
+    let changed = false; (x.files || []).forEach((f, i) => { if (!f.fid) { f.fid = x.id + "-" + i; changed = true; } });
+    if (changed) await DB.put("tickets", x, true);
+    const rm = (R.tickets || {})[x.id];
+    if (!rm || (x.upd || 0) >= (rm.upd || 0)) {
+      const have = new Set(rm ? rm.files.map(f => f.fid) : []);
+      for (const f of x.files || []) if (!have.has(f.fid)) await upBlob(t.id, f.fid, f.blob);
+      tickets[x.id] = tMeta(x);
+    } else {
+      const files = []; for (const f of rm.files) { const loc = (x.files || []).find(y => y.fid === f.fid); files.push(loc || { ...f, blob: await downBlob(t.id, f.fid) }); }
+      await DB.put("tickets", { ...rm, trip: t.id, files: files.filter(f => f.blob) }, true); tickets[x.id] = rm;
+    }
+  }
+  for (const [id, rm] of Object.entries(R.tickets || {})) {
+    if (tickets[id] || (tomb[id] && tomb[id] >= (rm.upd || 0))) continue;
+    const files = []; for (const f of rm.files) { const blob = await downBlob(t.id, f.fid); if (blob) files.push({ ...f, blob }); }
+    await DB.put("tickets", { ...rm, trip: t.id, files }, true); tickets[id] = rm;
+  }
+  // enregistrer en local (sans changer les dates de modification)
+  const merged = ls.get("cv-comptes-" + t.id) ? { ...ls.get("cv-comptes-" + t.id) } : {};
+  ls.set("cv-comptes-" + t.id, { ...merged, people: comptes.people, exp: comptes.exp });
+  ls.set("cv-resa-" + t.id, Object.fromEntries(Object.entries(resa).map(([k, v]) => [k, v[0]])));
+  ls.set("cv-resaupd-" + t.id, Object.fromEntries(Object.entries(resa).map(([k, v]) => [k, v[1]])));
+  ls.set("cv-tomb", tomb);
+  const N = { v: 1, comptes, resa, photos, tickets, tomb };
+  if (!rf || JSON.stringify(N) !== JSON.stringify(R)) await ghPut(path, await sealJSON(N), rf && rf.sha, "Synchronisation " + t.title);
+}
+async function runSync(manual) {
+  if (!syncCfg() || !PRIV) { SYNC.state = "off"; return updateSyncChip(); }
+  if (!navigator.onLine) { SYNC.state = "offline"; return updateSyncChip(); }
+  if (SYNC.running) return SYNC.running;
+  SYNC.state = "run"; updateSyncChip();
+  SYNC.running = (async () => {
+    try {
+      await ensureBranch(); await syncKey();
+      for (const t of TRIPS) for (let n = 0; n < 3; n++) { try { await syncTrip(t); break; } catch (e) { if (!e.conflict || n === 2) throw e; } }
+      SYNC.state = "ok"; SYNC.last = Date.now(); SYNC.err = "";
+      if (trip) { await loadTripData(); if (!route.home && !$$("dialog[open]").some(d => d.id !== "sdlg")) refresh(); }
+      if (manual) toast("Synchronisé");
+    } catch (e) {
+      SYNC.state = "err";
+      SYNC.err = e.message === "acces" || /github 40[13]/.test(e.message) ? "La clé d'accès GitHub est refusée : vérifie qu'elle peut modifier le dépôt." : e.message === "code" ? "Entre le code pour synchroniser." : "La synchronisation a échoué. Elle réessaiera plus tard.";
+      if (/OperationError/.test(String(e && e.name))) SYNC.err = "Le coffre a été créé avec un autre code.";
+      if (manual) toast(SYNC.err);
+    }
+    SYNC.running = null; updateSyncChip();
+  })();
+  return SYNC.running;
+}
+function scheduleSync() { if (!syncCfg() || !PRIV) return; clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => runSync(), 2500); }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") scheduleSync(); });
+window.addEventListener("online", () => scheduleSync());
+function syncLabel() {
+  const s = SYNC.state;
+  if (!syncCfg()) return ["cloud", "Synchroniser mes appareils"];
+  if (s === "run") return ["refresh", "Synchronisation…"];
+  if (s === "offline") return ["cloud", "Hors ligne : synchronisation au retour du réseau"];
+  if (s === "err") return ["alert-triangle", "Synchronisation en échec"];
+  if (SYNC.last) { const m = Math.round((Date.now() - SYNC.last) / 60000); return ["check", m < 1 ? "Synchronisé à l'instant" : `Synchronisé il y a ${m} min`]; }
+  return ["cloud", "Synchronisation activée"];
+}
+const syncChip = () => PRIV ? `<button class="syncchip" data-syncdlg>${ic(syncLabel()[0])}<span>${syncLabel()[1]}</span></button>` : "";
+function updateSyncChip() { const [i, l] = syncLabel(); $$(".syncchip").forEach(b => { b.innerHTML = ic(i) + `<span>${l}</span>`; b.classList.toggle("bad", SYNC.state === "err"); }); const st = $("#sStatus"); if (st) st.textContent = SYNC.err || l; }
+/* fenêtre de réglage */
+function openSyncDlg() {
+  const c = syncCfg(), d = defaultRepo();
+  $("#sOn").hidden = !!c; $("#sOff").hidden = !c;
+  $("#sRepo").textContent = (c || d).owner + "/" + (c || d).repo;
+  $("#sToken").value = ""; $("#sErr").textContent = ""; updateSyncChip();
+  const sd = $("#sdlg"); sd.showModal ? sd.showModal() : sd.setAttribute("open", "");
+}
+$("#sCancel").onclick = () => $("#sdlg").close();
+$("#sClose").onclick = () => $("#sdlg").close();
+$("#sForm2").onsubmit = ev => { ev.preventDefault(); $("#sEnable").click(); };
+$("#sEnable").onclick = async ev => {
+  const token = $("#sToken").value.trim(); if (!token) return $("#sErr").textContent = "Colle ta clé d'accès GitHub.";
+  ls.set("cv-sync", { token, ...defaultRepo() }); SYNC.key = null;
+  $("#sErr").textContent = "Vérification…";
+  await runSync(true);
+  if (SYNC.state === "ok") { $("#sdlg").close(); toast("Synchronisation activée sur cet appareil"); }
+  else { $("#sErr").textContent = SYNC.err; ls.set("cv-sync", null); SYNC.state = "off"; updateSyncChip(); }
+};
+$("#sNow").onclick = () => runSync(true);
+$("#sDisable").onclick = () => { ls.set("cv-sync", null); SYNC.key = null; SYNC.state = "off"; updateSyncChip(); $("#sdlg").close(); toast("Synchronisation désactivée sur cet appareil"); };
+
 /* ---------- interactions ---------- */
 function bindView() {
   const v = $("#app");
   hydrate(v);
   $$(".chk input", v).forEach(c => c.onchange = () => {
     const k = "cv-resa-" + trip.id, done = ls.get(k) || {}; done[c.dataset.k] = c.checked; ls.set(k, done);
+    const ku = "cv-resaupd-" + trip.id, up = ls.get(ku) || {}; up[c.dataset.k] = Date.now(); ls.set(ku, up); scheduleSync();
     const resa = trip.resa, n = resa.filter(r => done[r[0]]).length, p = c.closest(".panel");
     p.querySelector(".prog i").style.width = (n / resa.length * 100) + "%"; p.querySelector(".cnt").textContent = `${n} sur ${resa.length} fait${n > 1 ? "s" : ""}`;
   });
@@ -1016,6 +1218,7 @@ document.addEventListener("click", async e => {
   if (e.target.closest("[data-export]")) return exportAll();
   if (e.target.closest("[data-addexp]")) return openExp();
   if (e.target.closest("[data-unlock]")) return openUnlock();
+  if (e.target.closest("[data-syncdlg]")) return openSyncDlg();
   if (e.target.closest("[data-lock]")) return lock();
   if (e.target.closest("[data-publish]")) return publishZip();
   if (e.target.closest("[data-rate-refresh]")) { const r = ls.get(RATE_KEY); if (r && r.manual) ls.set(RATE_KEY, null); await refreshRate(true); if (!route.home) refresh(); return toast("Taux mis à jour"); }

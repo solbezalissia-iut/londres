@@ -38,17 +38,31 @@ Deux façons de rembourser :
 
 Le taux livre → euro est modifiable.
 
-Les comptes sont enregistrés sur l'appareil où tu les saisis (comme les photos) et inclus dans la sauvegarde : tiens-les sur un seul téléphone, ou passe la sauvegarde à l'autre.
+Avec la synchronisation activée (voir plus bas), les comptes sont partagés entre tous tes appareils.
+
+## Synchroniser plusieurs appareils
+
+En accès privé, touche **« Synchroniser mes appareils »** (en haut). Comptes, cases cochées, photos et billets sont alors envoyés dans ton dépôt GitHub, **chiffrés avec le code**, sur une branche à part nommée `donnees` (le site, publié depuis `main`, n'est pas touché). Chaque appareil synchronisé récupère automatiquement les changements des autres : à l'ouverture, au retour du réseau et quelques secondes après chaque modification. Sans réseau, tout reste utilisable et part dès que la connexion revient.
+
+Il faut une **clé d'accès GitHub** (à faire une seule fois, sur ordinateur) :
+
+1. github.com → photo de profil → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. Nom : « Carnet de voyage », expiration : 1 an.
+3. **Repository access** : *Only select repositories* → `londres`.
+4. **Permissions** → *Repository permissions* → **Contents : Read and write**.
+5. **Generate token**, copie la clé, puis colle-la dans la fenêtre de synchronisation de chaque appareil (envoie-la toi par AirDrop ou dans une note privée).
+
+La clé reste sur l'appareil où tu la colles ; elle n'est jamais mise sur GitHub.
 
 ## Où sont stockés photos et billets ?
 
-**Uniquement dans le navigateur de l'appareil où tu les ajoutes.** Ils ne sont jamais mis sur GitHub, parce qu'un site GitHub Pages est public et que tes QR codes et photos perso ne doivent pas l'être.
+Dans le navigateur de chaque appareil, et, si la synchronisation est activée, dans la branche `donnees` du dépôt, **chiffrés** : personne ne peut les lire sans le code. Les photos ne deviennent publiques que si tu les publies dans le récap.
 
 Pour les garder en sécurité ou les passer de l'ordinateur au téléphone : onglet **Photos** ou **Billets** → **Télécharger une sauvegarde**, envoie-toi le fichier, puis **Restaurer une sauvegarde** sur l'autre appareil.
 
 Les billets déjà enregistrés avec l'ancienne version du site sont repris automatiquement, et les anciennes sauvegardes (`billets-londres-2027.json`) se restaurent aussi.
 
-⚠️ Ne mets jamais tes billets ou photos dans le dépôt GitHub.
+⚠️ Ne dépose jamais toi-même tes billets ou photos en clair dans le dépôt GitHub.
 
 ## Récap public et accès privé
 

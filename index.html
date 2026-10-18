@@ -320,6 +320,9 @@ fieldset.split legend{font-weight:800;font-size:13.5px;padding:0;display:flex;al
 .debt.done > span{text-decoration:line-through;color:var(--muted)}
 .debt .chip{min-height:34px;padding:5px 12px;font-size:12.5px;background:var(--surface)}
 .debt .chip.ok{background:var(--mint);color:var(--mint-fg)}
+.syncchip{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--surface);color:var(--primary);font:inherit;font-weight:800;font-size:13px;padding:8px 14px;border-radius:999px;box-shadow:var(--shadow)}
+.syncchip svg.i{width:17px;height:17px}
+.syncchip.bad{background:var(--butter);color:var(--butter-fg)}
 #toast{position:fixed;left:50%;bottom:calc(26px + var(--safe-b));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:800;font-size:14px;z-index:50;max-width:calc(100vw - 32px);text-align:center;box-shadow:var(--shadow)}
 footer{margin-top:36px;color:var(--muted);font-size:13px}
 
@@ -434,12 +437,34 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
   </form>
 </dialog>
 
+<dialog id="sdlg" aria-labelledby="sTitle">
+  <div class="dlg">
+    <h2 id="sTitle">Synchroniser mes appareils</h2>
+    <p class="small">Comptes, cases cochées, photos et billets sont envoyés, chiffrés avec ton code, dans ton dépôt GitHub (branche « donnees », qui ne change pas le site). Chaque appareil où tu actives la synchronisation retrouve tout.</p>
+    <p class="small" id="sStatus" style="font-weight:800;color:var(--primary)"></p>
+    <div id="sOn">
+      <ol class="small" style="padding-left:18px;margin:0 0 12px;display:grid;gap:4px">
+        <li>Sur ordinateur, ouvre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens</a>.</li>
+        <li>Nom : « Carnet de voyage », expiration : 1 an. « Repository access » : <b>Only select repositories</b> → <b id="sRepo"></b>.</li>
+        <li>« Permissions » → « Repository permissions » → <b>Contents : Read and write</b>. Puis « Generate token » et copie la clé.</li>
+        <li>Colle-la ci-dessous, sur chaque appareil (envoie-la toi par AirDrop ou dans une note privée).</li>
+      </ol>
+      <form id="sForm2" class="field"><label for="sToken">Clé d'accès GitHub</label><input id="sToken" autocomplete="off" placeholder="github_pat_…" spellcheck="false"></form>
+      <div class="err" id="sErr" role="alert"></div>
+      <div class="dlgbar"><button type="button" class="btn" id="sCancel">Annuler</button><button type="button" class="btn solid" id="sEnable">Activer</button></div>
+    </div>
+    <div id="sOff" hidden>
+      <div class="dlgbar" style="justify-content:flex-start"><button type="button" class="btn solid" id="sNow">Synchroniser maintenant</button><button type="button" class="btn danger-soft" id="sDisable">Désactiver sur cet appareil</button><span style="flex:1"></span><button type="button" class="btn" id="sClose">Fermer</button></div>
+    </div>
+  </div>
+</dialog>
+
 <div id="toast" role="status" hidden></div>
 
-<script>self.APPV = "2026-10-18i";</script>
-<script src="icons.js?v=2026-10-18i"></script>
-<script src="outils/carnet-build.js?v=2026-10-18i"></script>
-<script src="voyages.js?v=2026-10-18i"></script>
-<script src="app.js?v=2026-10-18i"></script>
+<script>self.APPV = "2026-10-18j";</script>
+<script src="icons.js?v=2026-10-18j"></script>
+<script src="outils/carnet-build.js?v=2026-10-18j"></script>
+<script src="voyages.js?v=2026-10-18j"></script>
+<script src="app.js?v=2026-10-18j"></script>
 </body>
 </html>

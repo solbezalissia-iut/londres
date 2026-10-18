@@ -3,7 +3,7 @@
    - Ensuite : essaie le réseau (pour avoir les mises à jour), mais si la connexion
      ne répond pas en 3 secondes ou est absente, sert la copie enregistrée. */
 importScripts("voyages.js");
-const VERSION = "2026-10-18i";
+const VERSION = "2026-10-18j";
 const CACHE = "carnets-" + VERSION;
 const FILES = ["./", "index.html", "app.js", "icons.js", "voyages.js", "outils/carnet-build.js", "lib/jszip.min.js",
   "fonts/nunito-latin-500-normal.woff2", "fonts/nunito-latin-700-normal.woff2", "fonts/nunito-latin-800-normal.woff2",

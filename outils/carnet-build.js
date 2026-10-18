@@ -53,5 +53,15 @@
     return "/* Récap public de « " + t.title + " » : créé automatiquement par outils/index.html.\n   Les détails (dates, horaires, réservations, trajets) sont dans prive/" + t.id + ".enc.json, chiffrés. */\n" +
       "(self.TRIPS = self.TRIPS || {})[" + JSON.stringify(t.id) + "] = " + JSON.stringify(toPublic(t), null, 1) + ";\n";
   }
-  root.CarnetBuild = { encrypt, decrypt, evalTrip, toPublic, publicFile, ITER };
+  /* clé dérivée une seule fois (synchronisation : beaucoup de petits fichiers) */
+  async function deriveKey(code, saltB64, iter) { return keyFrom(code, unb64(saltB64), iter || ITER); }
+  function newSalt() { return b64((root.crypto || globalThis.crypto).getRandomValues(new Uint8Array(16))); }
+  async function seal(key, bytes) {
+    const iv = (root.crypto || globalThis.crypto).getRandomValues(new Uint8Array(12));
+    return { iv: b64(iv), data: b64(await subtle().encrypt({ name: "AES-GCM", iv }, key, bytes)) };
+  }
+  async function open(key, obj) { return new Uint8Array(await subtle().decrypt({ name: "AES-GCM", iv: unb64(obj.iv) }, key, unb64(obj.data))); }
+  const sealText = async (key, text) => seal(key, enc.encode(text));
+  const openText = async (key, obj) => dec.decode(await open(key, obj));
+  root.CarnetBuild = { encrypt, decrypt, evalTrip, toPublic, publicFile, ITER, deriveKey, newSalt, seal, open, sealText, openText, b64, unb64 };
 })(typeof self !== "undefined" ? self : globalThis);
