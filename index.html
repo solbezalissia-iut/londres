@@ -304,6 +304,15 @@ fieldset.split legend{font-weight:800;font-size:13.5px;padding:0;display:flex;al
 #eSplit{background:var(--bg);border-radius:14px;padding:6px 12px;margin-top:5px}
 #eSplit input:checked + span{text-decoration:none;color:inherit}
 .btn.danger-soft{background:var(--pink);color:var(--pink-fg)}
+.hacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.conv .convrow{display:flex;align-items:flex-end;gap:10px}
+.conv label{flex:1;display:grid;gap:4px;font-weight:800;font-size:13px;color:var(--muted);min-width:0}
+.conv input{font:inherit;font-size:20px;font-weight:800;padding:10px 12px;border:0;border-radius:14px;background:var(--bg);color:var(--fg);width:100%}
+.conv .convx{font-weight:800;font-size:20px;color:var(--muted);padding-bottom:10px}
+.conv .small{margin-top:10px}
+.conv label:focus-within{outline:none}
+.lbbtn.on{background:#c8f0de;color:#0b6a49}
+@media (max-width:720px){.secnav.pub{left:50%;right:auto;transform:translateX(-50%);width:min(320px,calc(100vw - 24px))}}
 #toast{position:fixed;left:50%;bottom:calc(26px + var(--safe-b));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:800;font-size:14px;z-index:50;max-width:calc(100vw - 32px);text-align:center;box-shadow:var(--shadow)}
 footer{margin-top:36px;color:var(--muted);font-size:13px}
 
@@ -378,8 +387,10 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
   <div class="lbbar">
     <label class="vh" for="lbCap">Légende</label>
     <input id="lbCap" placeholder="Ajouter une légende" autocomplete="off" enterkeyhint="done">
+    <p id="lbCapRO" style="margin:0;font-weight:700" hidden></p>
     <div class="lbact">
       <button type="button" class="lbbtn" id="lbShare" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Partager</button>
+      <button type="button" class="lbbtn" id="lbPub" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/></svg>Récap public</button>
       <a class="lbbtn" id="lbDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</a>
       <button type="button" class="lbbtn danger" id="lbDel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Supprimer</button>
     </div>
@@ -405,9 +416,21 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
   </form>
 </dialog>
 
+<dialog id="udlg" aria-labelledby="uTitle">
+  <form id="uForm" class="dlg" method="dialog">
+    <h2 id="uTitle">Accès privé</h2>
+    <p class="small">Entre le code pour voir les horaires, trajets, réservations, billets, budget et comptes.</p>
+    <div class="field"><label for="uCode">Code</label><input id="uCode" type="password" inputmode="numeric" autocomplete="off" enterkeyhint="go"></div>
+    <label class="small" style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="uRemember" checked style="width:20px;height:20px;accent-color:var(--primary)">Rester déverrouillé sur cet appareil</label>
+    <div class="err" id="uErr" role="alert"></div>
+    <div class="dlgbar"><button type="button" class="btn" id="uCancel">Annuler</button><button type="submit" class="btn solid">Ouvrir</button></div>
+  </form>
+</dialog>
+
 <div id="toast" role="status" hidden></div>
 
 <script src="icons.js"></script>
+<script src="outils/carnet-build.js"></script>
 <script src="voyages.js"></script>
 <script src="app.js"></script>
 </body>

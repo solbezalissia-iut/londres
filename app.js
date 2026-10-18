@@ -127,13 +127,18 @@ async function migrateOld() {
 
 /* ---------- état ---------- */
 let trip = null, TICKETS = [], PHOTOS = [], route = { home: true }, section = "", dayId = "";
+let PRIV = false; // true une fois le code entré : détails, billets, comptes
+const PRIVATE_SECTIONS = ["billets", "budget", "comptes", "infos"];
+const pubPhotos = id => ((self.PUBPHOTOS || {})[id] || []).map((x, i) => ({ id: "pub:" + id + ":" + x.f, key: id + "|" + x.k, src: "photos/" + id + "/" + encodeURIComponent(x.f), caption: x.c || "", pub: true, pubName: x.f, created: i }));
 const tKey = (d, s) => trip.id + "|" + d.id + "|" + s.n;
 const ticketsFor = k => TICKETS.filter(t => t.key === k);
 const photosFor = k => PHOTOS.filter(p => p.key === k).sort((a, b) => a.created - b.created);
 
 async function loadTripData() {
-  try { [TICKETS, PHOTOS] = await Promise.all([DB.byTrip("tickets", trip.id), DB.byTrip("photos", trip.id)]); }
-  catch (e) { DB.ok = false; TICKETS = []; PHOTOS = []; }
+  let local = []; TICKETS = [];
+  if (PRIV) { try { [TICKETS, local] = await Promise.all([DB.byTrip("tickets", trip.id), DB.byTrip("photos", trip.id)]); } catch (e) { DB.ok = false; TICKETS = []; local = []; } }
+  const names = new Set(local.map(p => p.pubName).filter(Boolean));
+  PHOTOS = local.concat(pubPhotos(trip.id).filter(p => !names.has(p.pubName)));
 }
 
 /* object URLs (aperçus et photos) */
@@ -141,7 +146,7 @@ const URLS = new Map();
 function objURL(id, blob) { if (!URLS.has(id)) URLS.set(id, URL.createObjectURL(blob)); return URLS.get(id); }
 function dropURL(id) { [id, id + ":f"].forEach(k => { if (URLS.has(k)) { URL.revokeObjectURL(URLS.get(k)); URLS.delete(k); } }); }
 function hydrate(root) {
-  $$("img[data-thumb]", root).forEach(img => { const p = PHOTOS.find(x => x.id === img.dataset.thumb); if (p) img.src = objURL(p.id, p.thumb || p.blob); });
+  $$("img[data-thumb]", root).forEach(img => { const p = PHOTOS.find(x => x.id === img.dataset.thumb); if (p) img.src = p.src || objURL(p.id, p.thumb || p.blob); });
   $$("img[data-blob]", root).forEach(img => { const [id, j] = img.dataset.blob.split(":"); const t = TICKETS.find(x => x.id === id); if (t && t.files[+j]) img.src = objURL(id + ":" + j, t.files[+j].blob); });
 }
 
@@ -167,7 +172,8 @@ async function render() {
   if (!sec) { const st = tripState(trip); sec = st.day || ls.get("cv-last-" + trip.id) || trip.days[0].id; history.replaceState(null, "", href(sec)); }
   const di = trip.days.findIndex(d => d.id === sec);
   if (di >= 0) { section = "programme"; dayId = sec; ls.set("cv-last-" + trip.id, sec); }
-  else if (["photos", "billets", "budget", "comptes", "infos"].includes(sec)) section = sec;
+  else if (sec === "photos") section = sec;
+  else if (PRIVATE_SECTIONS.includes(sec)) section = PRIV ? sec : "locked";
   else { location.hash = href(trip.days[0].id); return; }
   renderTrip();
 }
@@ -187,9 +193,11 @@ async function renderHome() {
   const stats = {};
   await Promise.all(TRIPS.map(async t => {
     let ph = [];
-    try { ph = await DB.byTrip("photos", t.id); } catch (e) {}
+    if (PRIV) try { ph = await DB.byTrip("photos", t.id); } catch (e) {}
     ph.sort((a, b) => b.created - a.created);
-    stats[t.id] = { photos: ph.length, cover: ph[0] || null, stops: t.days.reduce((a, d) => a + d.stops.length, 0) };
+    const names = new Set(ph.map(p => p.pubName).filter(Boolean));
+    const all = ph.concat(pubPhotos(t.id).filter(p => !names.has(p.pubName)));
+    stats[t.id] = { photos: all.length, cover: all[0] || null, stops: t.days.reduce((a, d) => a + d.stops.length, 0) };
   }));
   const order = TRIPS.slice().sort((a, b) => {
     const pa = tripState(a).k === "past", pb = tripState(b).k === "past";
@@ -198,7 +206,7 @@ async function renderHome() {
   const next = order.find(t => tripState(t).k !== "past");
   const hi = next ? (tripState(next).k === "now" ? `Bon voyage à ${next.title} !` : `Bonjour ! ${tripState(next).txt}`) : "Bonjour !";
   $("#app").innerHTML = `
-   <header class="hello"><div><p class="hi">${esc(hi)}</p><h1>Mes voyages</h1></div>${netPill()}</header>
+   <header class="hello"><div><p class="hi">${esc(PRIV ? hi : "Le récap de nos voyages")}</p><h1>${PRIV ? "Mes voyages" : "Nos voyages"}</h1></div><div class="hacts">${netPill()}${lockBtn()}</div></header>
    <div class="trips">${order.map(t => {
      const st = tripState(t), s = stats[t.id];
      return `<a class="trip card ${st.k}" href="#/${esc(t.id)}">
@@ -210,9 +218,9 @@ async function renderHome() {
          <div class="chips"><span>${plural(t.days.length, "jour")}</span><span>${plural(s.stops, "étape")}</span><span>${plural(s.photos, "photo")}</span></div>
        </div></a>`;
    }).join("")}</div>
-   <section class="howto card">${tile("plus", "lilac")}<div><h2>Ajouter un voyage</h2><p>Sur GitHub, copie le fichier <b>voyages/modele.js</b> sous un nouveau nom (par exemple <b>voyages/rome.js</b>), remplis-le, puis ajoute son nom dans <b>voyages.js</b>. Le nouveau voyage apparaît ici une à deux minutes plus tard.</p></div></section>
-   <footer>Les photos, billets et cases cochées sont enregistrés uniquement sur cet appareil.</footer>`;
-  $$("img[data-cover]").forEach(img => { const id = img.dataset.cover; for (const t of TRIPS) { const c = stats[t.id].cover; if (c && c.id === id) img.src = objURL("cover:" + id, c.thumb || c.blob); } });
+   ${PRIV ? `<section class="howto card">${tile("plus", "lilac")}<div><h2>Ajouter un voyage</h2><p>Sur GitHub, copie le fichier <b>voyages/modele.js</b> sous un nouveau nom (par exemple <b>voyages/rome.js</b>), remplis-le, puis ajoute son nom dans <b>voyages.js</b>. Le nouveau voyage apparaît ici une à deux minutes plus tard. Pour modifier un programme, utilise la page <a href="outils/">Modifier un voyage</a>.</p></div></section>
+   <footer>Les photos, billets et cases cochées sont enregistrés uniquement sur cet appareil.</footer>` : `<footer>Les activités et les photos de chaque voyage. Les horaires et les réservations sont réservés aux voyageurs.</footer>`}`;
+  $$("img[data-cover]").forEach(img => { const id = img.dataset.cover; for (const t of TRIPS) { const c = stats[t.id].cover; if (c && c.id === id) img.src = c.src || objURL("cover:" + id, c.thumb || c.blob); } });
 }
 /* six étapes phares aux icônes différentes, pour la couverture sans photo */
 function highlights(t) {
@@ -237,17 +245,17 @@ function renderTrip() {
   document.title = t.title + " · Mes voyages";
   setTheme();
   const counts = { photos: PHOTOS.length, billets: TICKETS.length };
-  const view = section === "programme" ? dayView() : section === "photos" ? photosView() : section === "billets" ? billetsView() : section === "budget" ? budgetView() : section === "comptes" ? comptesView() : infosView();
+  const view = section === "locked" ? lockedView() : section === "programme" ? dayView() : section === "photos" ? photosView() : section === "billets" ? billetsView() : section === "budget" ? budgetView() : section === "comptes" ? comptesView() : infosView();
   $("#app").innerHTML = `
-   <div class="tripbar"><a class="iconbtn" href="#/" aria-label="Retour à mes voyages">${I.back}</a><span class="crumb">Mes voyages</span>${netPill()}</div>
+   <div class="tripbar"><a class="iconbtn" href="#/" aria-label="Retour aux voyages">${I.back}</a><span class="crumb">${PRIV ? "Mes voyages" : "Nos voyages"}</span>${netPill()}${lockBtn(true)}</div>
    <header class="hero card">
      <div class="htop"><div><h1>${esc(t.title)}</h1><div class="hdates">${esc(range(t.start, t.end))}</div></div><span class="pill">${esc(st.txt)}</span></div>
-     ${(t.facts || []).length ? `<div class="hfacts">${t.facts.map(f => { const [n, tone] = factIcon(f[0]); return `<div class="fact">${tile(n, tone)}<div style="min-width:0"><small>${esc(f[0])}</small><b>${esc(f[1])}</b></div></div>`; }).join("")}</div>` : ""}
+     ${!PRIV && t.summary ? `<p class="daysub">${esc(t.summary)}</p>` : ""}
+     ${PRIV && (t.facts || []).length ? `<div class="hfacts">${t.facts.map(f => { const [n, tone] = factIcon(f[0]); return `<div class="fact">${tile(n, tone)}<div style="min-width:0"><small>${esc(f[0])}</small><b>${esc(f[1])}</b></div></div>`; }).join("")}</div>` : ""}
    </header>
-   <nav class="secnav" aria-label="Sections du voyage">${SECTIONS.filter(s => s[0] !== "budget" || (t.budget && t.budget.length) || (t.paid && t.paid.length)).map(([id, lab, icn]) =>
-     `<a href="${href(id === "programme" ? dayId || t.days[0].id : id)}" ${section === id ? 'aria-current="page"' : ""}>${icn}<span>${lab}</span>${counts[id] ? `<span class="n">${counts[id]}</span>` : ""}</a>`).join("")}</nav>
+   <nav class="secnav${PRIV ? "" : " pub"}" aria-label="Sections du voyage">${SECTIONS.filter(s => PRIV ? (s[0] !== "budget" || (t.budget && t.budget.length) || (t.paid && t.paid.length)) : ["programme", "photos"].includes(s[0])).map(([id, lab0, icn]) => { const lab = !PRIV && id === "programme" ? "Activités" : lab0; return `<a href="${href(id === "programme" ? dayId || t.days[0].id : id)}" ${section === id ? 'aria-current="page"' : ""}>${icn}<span>${lab}</span>${counts[id] ? `<span class="n">${counts[id]}</span>` : ""}</a>`; }).join("")}</nav>
    ${view}
-   ${t.footer ? `<footer>${esc(t.footer)} Les photos, billets et cases cochées restent sur l'appareil qui les a enregistrés.</footer>` : ""}`;
+   ${PRIV ? (t.footer ? `<footer>${esc(t.footer)} Les photos, billets et cases cochées restent sur l'appareil qui les a enregistrés.</footer>` : "") : `<footer>Récap public : les horaires, trajets et réservations sont visibles avec le code.</footer>`}`;
   bindView();
 }
 
@@ -274,6 +282,14 @@ function stopHTML(d, s, i) {
      <ol>${s.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
      ${prev && prev !== s.q ? `<a class="mini" href="${mapsDir(t, prev, s.q, s.mode === "walk")}" target="_blank" rel="noopener">${ic("map-2")}${s.mode === "walk" ? "Itinéraire à pied" : "Itinéraire en transports"} dans Google Maps</a>` : ""}
    </details>` : "";
+  if (!PRIV) return `<li id="${esc(d.id)}-${i}" class="publi">
+    <article class="card scard">
+      <div class="shead">${tile(stopIcon(s))}
+        <div class="smain">${s.major ? '<div class="stime"><span class="must">Incontournable</span></div>' : ""}
+          <h3><a href="${mapsSearch(t, s.q)}" target="_blank" rel="noopener">${esc(s.n)}</a></h3>
+          ${s.d ? `<p class="addr" style="font-size:14px">${esc(s.d)}</p>` : ""}</div></div>
+      ${photoStrip(key) ? `<div class="sbody" style="margin-top:4px">${photoStrip(key)}</div>` : ""}
+    </article></li>`;
   return `<li id="${esc(d.id)}-${i}">
     ${i > 0 ? legHTML(s) : ""}
     <article class="card scard">
@@ -297,6 +313,17 @@ function stopHTML(d, s, i) {
 function dayView() {
   const t = trip, i = t.days.findIndex(d => d.id === dayId), d = t.days[i];
   const noteTile = k => k === "warn" ? tile("alert-triangle", "butter") : tile(k === "info" ? "bulb" : "info-circle", k === "info" ? "lilac" : "mint");
+  if (!PRIV) return `${daysNav()}<main class="full"><section aria-labelledby="h-${esc(d.id)}" style="--dc:${esc(d.c)};min-width:0;max-width:760px">
+   <div class="card dayhead">
+     <div class="dkick"><i></i>Jour ${i + 1}, ${esc(d.dow.toLowerCase())}. ${parts(d.date).d} ${MOIS[parts(d.date).m - 1]}</div>
+     <h2 id="h-${esc(d.id)}">${esc(d.title)}</h2>
+     ${d.sub ? `<p class="daysub">${esc(d.sub)}</p>` : ""}
+   </div>
+   ${d.stops.length ? `<ol class="stops pubstops">${d.stops.map((s, k) => stopHTML(d, s, k)).join("")}</ol>` : `<div class="card empty" style="margin-top:12px">${tile("plane-departure", "peach")}<p>Journée de retour.</p></div>`}
+   <div class="pager">
+    ${i > 0 ? `<a class="btn ghost" href="${href(t.days[i - 1].id)}">${ic("chevron-left")}${esc(t.days[i - 1].dow)} ${parts(t.days[i - 1].date).d}</a>` : "<span></span>"}
+    ${i < t.days.length - 1 ? `<a class="btn solid" href="${href(t.days[i + 1].id)}">${esc(t.days[i + 1].dow)} ${parts(t.days[i + 1].date).d}${ic("chevron-right")}</a>` : ""}
+   </div></section></main>`;
   return `${daysNav()}<main><section aria-labelledby="h-${esc(d.id)}" style="--dc:${esc(d.c)};min-width:0">
    <div class="card dayhead">
      <div class="dkick"><i></i>Jour ${i + 1}, ${esc(d.dow.toLowerCase())}. ${parts(d.date).d} ${MOIS[parts(d.date).m - 1]}</div>
@@ -323,6 +350,7 @@ function sidebar() {
   const oui = (t.budget || []).filter(b => b[3] === "oui");
   const lo = oui.reduce((a, b) => a + b[4], 0), hi = oui.reduce((a, b) => a + b[5], 0);
   return `<aside>
+   ${convHTML()}
    ${resa.length ? `<div class="card panel"><h3>${tile("check", "mint")}À réserver</h3>
     <div class="prog"><i style="width:${n / resa.length * 100}%"></i></div>
     <div class="small cnt" style="margin-bottom:6px">${n} sur ${resa.length} fait${n > 1 ? "s" : ""}</div>
@@ -355,13 +383,14 @@ function photosView() {
   const orphan = Object.keys(byKey).filter(k => !known.has(k));
   return `<main class="full"><section style="min-width:0">
    <h2 class="pageh" style="margin-top:8px">Photos</h2>
-   <p class="daysub">${PHOTOS.length ? `${plural(PHOTOS.length, "photo")}, rangée${PHOTOS.length > 1 ? "s" : ""} par jour et par endroit. ` : ""}Pour en ajouter, ouvre un jour du programme et touche « Ajouter des photos » sur l'étape.</p>
-   <div class="store small" id="storeInfo"></div>
+   <p class="daysub">${PHOTOS.length ? `${plural(PHOTOS.length, "photo")}, rangée${PHOTOS.length > 1 ? "s" : ""} par jour et par endroit. ` : ""}${PRIV ? "Pour en ajouter, ouvre un jour du programme et touche « Ajouter des photos » sur l'étape." : ""}</p>
+   ${PRIV ? `<div class="store small" id="storeInfo"></div>` : ""}
    ${!DB.ok ? `<div class="note" style="margin-top:14px">${tile("alert-triangle", "butter")}<p>Ce navigateur bloque le stockage (navigation privée ?). Ouvre le site dans une fenêtre normale pour garder des photos.</p></div>` : ""}
    ${PHOTOS.length ? days + (orphan.length ? `<section class="card pgday"><h3><i></i>Autres photos</h3><p class="small">Étapes renommées ou retirées du programme.</p>${orphan.map(k => `<div class="pgstop"><h4>${esc(k.split("|").slice(2).join("|"))}</h4>${grid(k)}</div>`).join("")}</section>` : "")
-     : `<div class="card empty">${tile("camera", "peach")}<p><b>Pas encore de photo.</b><br>Chaque étape du programme a un bouton « Ajouter des photos » : prends une photo sur place ou choisis-en dans ta galerie.</p></div>
-        <div class="toolbar"><a class="btn solid" href="${href(dayId || t.days[0].id)}">Ouvrir le programme</a></div>`}
-   ${backupPanel()}
+     : PRIV ? `<div class="card empty">${tile("camera", "peach")}<p><b>Pas encore de photo.</b><br>Chaque étape du programme a un bouton « Ajouter des photos » : prends une photo sur place ou choisis-en dans ta galerie.</p></div>
+        <div class="toolbar"><a class="btn solid" href="${href(dayId || t.days[0].id)}">Ouvrir le programme</a></div>`
+     : `<div class="card empty">${tile("camera", "peach")}<p><b>Les photos arrivent bientôt.</b><br>Elles apparaîtront ici pendant et après le voyage.</p></div>`}
+   ${PRIV ? publishPanel() + backupPanel() : ""}
   </section></main>`;
 }
 function backupPanel() {
@@ -428,22 +457,30 @@ function openLB(key, id) {
 }
 function showLB() {
   const p = lbList[lbI]; if (!p) return;
-  const u = objURL(p.id + ":f", p.blob);
+  const u = p.src || objURL(p.id + ":f", p.blob);
   $("#lbImg").src = u; $("#lbImg").alt = p.caption || "";
   $("#lbTitle").textContent = stopLabel(p.key);
   $("#lbCount").textContent = lbList.length > 1 ? `${lbI + 1} / ${lbList.length}` : "";
-  $("#lbCap").value = p.caption || "";
+  $("#lbCap").value = p.caption || ""; $("#lbCap").hidden = !!p.src || !PRIV; $("#lbCapRO").textContent = p.caption || ""; $("#lbCapRO").hidden = !((p.src || !PRIV) && p.caption);
+  $("#lbDel").hidden = !!p.src || !PRIV;
+  const pb = $("#lbPub"); pb.hidden = !!p.src || !PRIV; pb.classList.toggle("on", !!p.wantPub); pb.lastChild.textContent = p.wantPub ? "Dans le récap public" : "Récap public";
   $("#lbPrev").disabled = lbI === 0; $("#lbNext").disabled = lbI >= lbList.length - 1;
   const fname = (stopLabel(p.key).replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "photo") + "-" + (lbI + 1) + ".jpg";
   $("#lbDl").href = u; $("#lbDl").download = fname;
   const del = $("#lbDel"); del.dataset.confirm = ""; del.lastChild.textContent = "Supprimer";
+  if (p.src) { $("#lbShare").hidden = true; return; }
   const file = new File([p.blob], fname, { type: p.blob.type || "image/jpeg" });
   $("#lbShare").hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
   $("#lbShare").onclick = () => navigator.share({ files: [file], title: stopLabel(p.key) }).catch(() => {});
 }
+$("#lbPub").onclick = async () => {
+  const p = lbList[lbI]; if (!p || p.src) return;
+  p.wantPub = !p.wantPub; try { await DB.put("photos", p); } catch (e) {}
+  showLB(); toast(p.wantPub ? "Ajoutée au récap public (à envoyer depuis l'onglet Photos)" : "Retirée du récap public");
+};
 const lbGo = n => { saveCap(); const j = lbI + n; if (j >= 0 && j < lbList.length) { lbI = j; showLB(); } };
 async function saveCap() {
-  const p = lbList[lbI]; if (!p) return; const v = $("#lbCap").value.trim();
+  const p = lbList[lbI]; if (!p || p.src || !PRIV) return; const v = $("#lbCap").value.trim();
   if (v === (p.caption || "")) return; p.caption = v; try { await DB.put("photos", p); } catch (e) {}
 }
 $("#lbPrev").onclick = () => lbGo(-1); $("#lbNext").onclick = () => lbGo(1);
@@ -584,6 +621,7 @@ function budgetView() {
   const sum = k => { const r = B.filter(b => b[3] === k); return [r.reduce((a, b) => a + b[4], 0), r.reduce((a, b) => a + b[5], 0)]; };
   const [ol, oh] = sum("oui"), [jl, jh] = sum("jsp");
   return `<main><section style="min-width:0">
+   ${convHTML()}
    ${paidBlock()}
    ${B.length ? `<h2 class="pageh" style="margin-top:${(t.paid || []).length ? 30 : 8}px">Activités, par personne</h2>
    <p class="daysub">Repris de ton tableau, avec ta colonne « On rentre ? ».</p>
@@ -591,7 +629,7 @@ function budgetView() {
     <div><span class="small">Activités retenues</span><span class="big">${money(ol)} – ${money(oh)}</span></div>
     ${jh ? `<div><span class="small">Avec les « Je sais pas »</span><span class="big">+ ${money(jl)} – ${money(jh)}</span></div>` : ""}
    </div>
-   <div class="card rows">${B.map(b => `<div class="brow"><b>${esc(b[0])}</b><span class="bp">${esc(b[1])}</span><span class="bd">${esc(b[6] && b[6] !== "—" ? b[6] + ", " : "")}${esc(b[2])}</span><span class="bs"><span class="pill ${esc(b[3])}">${lab[b[3]] || esc(b[3])}</span></span></div>`).join("")}</div>` : ""}
+   <div class="card rows">${B.map(b => `<div class="brow"><b>${esc(b[0])}</b><span class="bp">${esc(b[1])}${b[5] ? `<span class="small" style="display:block;font-weight:700">≈ ${euroRange(b[4], b[5])}</span>` : ""}</span><span class="bd">${esc(b[6] && b[6] !== "—" ? b[6] + ", " : "")}${esc(b[2])}</span><span class="bs"><span class="pill ${esc(b[3])}">${lab[b[3]] || esc(b[3])}</span></span></div>`).join("")}</div>` : ""}
    ${t.free ? `<div class="card panel" style="margin-top:16px"><h3>${tile("sparkles", "mint")}Gratuit</h3><p class="small">${esc(t.free)}</p></div>` : ""}
   </section>${sidebar()}</main>`;
 }
@@ -610,7 +648,7 @@ function paidBlock() {
 /* ---------- comptes partagés (façon Tricount) ----------
    Enregistrés sur l'appareil : { people:[{id,name}], exp:[{id,title,amount,cur,paidBy,split:[ids],date,kind,paidRef}], rate } */
 const CK = () => "cv-comptes-" + trip.id;
-const getC = () => { const c = ls.get(CK()) || {}; return { people: c.people || [], exp: c.exp || [], rate: c.rate || trip.rate || 1.16 }; };
+const getC = () => { const c = ls.get(CK()) || {}; return { people: c.people || [], exp: c.exp || [], rate: getRate().v }; };
 const setC = c => ls.set(CK(), c);
 const toEur = (e, c) => e.cur === "£" ? e.amount * c.rate : e.amount;
 const nameOf = (c, id) => (c.people.find(p => p.id === id) || { name: "?" }).name;
@@ -656,6 +694,7 @@ function comptesView() {
    <div class="sum"><div><span class="small">Dépenses du groupe</span><span class="big">${euro(total)}</span></div>
      <div><span class="small">Par personne</span><span class="big">${euro(c.people.length ? total / c.people.length : 0)}</span></div></div>
    <div class="toolbar"><button class="btn solid" data-addexp>${I.plus}Ajouter une dépense</button></div>
+   <div style="margin-top:16px">${convHTML()}</div>
 
    ${pendingPaid.length ? `<div class="card panel" style="margin-top:16px"><h3>${tile("receipt", "butter")}Réservations à attribuer</h3>
      <p class="small" style="margin:-4px 0 10px">Indique qui a payé chaque réservation pour l'ajouter aux comptes.</p>
@@ -687,7 +726,7 @@ function comptesView() {
      <form id="cAdd" style="display:flex;gap:8px;flex-wrap:wrap"><input id="cNew" placeholder="Ajouter un voyageur" autocomplete="off" style="font:inherit;font-size:16px;padding:10px 12px;border:0;border-radius:14px;background:var(--bg);color:var(--fg);flex:1;min-width:160px"><button class="btn" type="submit">${ic("user-plus")}Ajouter</button></form>
      <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:14px;font-weight:700">1 £ =
        <input id="cRate" type="number" step="0.01" min="0.5" max="3" value="${c.rate}" style="font:inherit;font-size:16px;width:90px;padding:8px 10px;border:0;border-radius:12px;background:var(--bg);color:var(--fg)"> €</label>
-     <p class="small" style="margin-top:6px">Taux approximatif, à ajuster avant de faire les comptes. Les comptes sont enregistrés sur cet appareil et inclus dans la sauvegarde.</p>
+     <p class="small" style="margin-top:6px">Même taux que le convertisseur. Les comptes sont enregistrés sur cet appareil et inclus dans la sauvegarde.</p>
    </div>
   </section></main>`;
 }
@@ -742,7 +781,7 @@ function bindComptes(v) {
   const a = $("#cAdd", v);
   if (a) a.onsubmit = ev => { ev.preventDefault(); const n = $("#cNew").value.trim(); if (!n) return; const c = getC(); c.people.push({ id: uid("u"), name: n }); setC(c); refresh(); toast(n + " ajouté·e aux comptes"); };
   const r = $("#cRate", v);
-  if (r) r.onchange = () => { const x = parseFloat(String(r.value).replace(",", ".")); if (x > 0) { const c = getC(); c.rate = x; setC(c); refresh(); } };
+  if (r) r.onchange = () => { const x = parseFloat(String(r.value).replace(",", ".")); if (x > 0) { ls.set(RATE_KEY, { v: x, manual: true }); refresh(); } };
   $$("[data-paidsel]", v).forEach(s => s.onchange = () => {
     if (!s.value) return; const i = +s.dataset.paidsel, x = trip.paid[i], c = getC();
     c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value, split: c.people.map(p => p.id), date: "", paidRef: i });
@@ -758,12 +797,126 @@ function infosView() {
   const t = trip, tones = ["sky", "lilac", "peach", "mint", "butter", "pink"], icons = ["coin", "bed", "plane", "device-tv", "bulb", "info-circle"];
   return `<main><section style="min-width:0">
    <h2 class="pageh" style="margin-top:8px">Infos pratiques</h2>
+   <div style="margin-top:16px">${convHTML()}</div>
    <div class="grid2">
     ${(t.infos || []).map((x, i) => `<div class="card panel"><h3>${tile(icons[i % icons.length], tones[i % tones.length])}${esc(x[0])}</h3><p>${esc(x[1])}</p></div>`).join("")}
     ${(t.bonus || []).length ? `<div class="card panel"><h3>${tile("star", "pink")}Idées en plus</h3><ul class="bonus">${t.bonus.map(b => `<li><a href="${mapsSearch(t, b[2])}" target="_blank" rel="noopener"><b>${esc(b[0])}</b></a> <span class="small">${esc(b[1])}</span></li>`).join("")}</ul></div>` : ""}
     <div class="card panel"><h3>${tile("cloud", "sky")}Hors connexion</h3><p>Ce site s'enregistre sur l'appareil dès la première visite : programme, photos et billets s'ouvrent ensuite sans réseau, même dans le métro. Seuls les liens Google Maps demandent une connexion. Ajoute-le à l'écran d'accueil pour l'ouvrir comme une appli.</p></div>
    </div>
   </section>${sidebar()}</main>`;
+}
+
+/* ---------- accès privé (code) ----------
+   Les détails de chaque voyage sont dans prive/<id>.enc.json, chiffrés avec le code (AES-GCM).
+   Sans le code, le site n'affiche que le récap public : activités et photos. */
+const lockBtn = small => PRIV
+  ? `<button class="${small ? "iconbtn" : "btn ghost"}" data-lock aria-label="Verrouiller">${ic("lock-open")}${small ? "" : "Verrouiller"}</button>`
+  : `<button class="${small ? "iconbtn" : "btn ghost"}" data-unlock aria-label="Accès privé">${ic("lock")}${small ? "" : "Accès privé"}</button>`;
+function lockedView() {
+  return `<main class="full"><section style="min-width:0;max-width:640px">
+   <div class="card empty" style="margin-top:16px">${tile("lock", "lilac")}<div><p><b>Partie réservée aux voyageurs.</b><br>Horaires, trajets, réservations, billets, budget et comptes s'affichent avec le code.</p>
+   <button class="btn solid" data-unlock style="margin-top:12px">${ic("lock-open")}Entrer le code</button></div></div></section></main>`;
+}
+async function unlock(code, remember) {
+  for (let i = 0; i < TRIPS.length; i++) {
+    const t = TRIPS[i]; if (!t.locked) continue;
+    let enc;
+    try { const r = await fetch("prive/" + encodeURIComponent(t.id) + ".enc.json"); if (!r.ok) throw 0; enc = await r.json(); }
+    catch (e) { throw new Error("reseau"); }
+    let text;
+    try { text = await CarnetBuild.decrypt(enc, code); } catch (e) { throw new Error("code"); }
+    const full = CarnetBuild.evalTrip(text);
+    TRIPS[i] = full; self.TRIPS[t.id] = full;
+  }
+  PRIV = true;
+  if (remember) ls.set("cv-code", code);
+  if (trip) { trip = TRIPS.find(x => x.id === trip.id); await loadTripData(); }
+  refreshRate();
+}
+const udlg = $("#udlg");
+function openUnlock() { $("#uCode").value = ""; $("#uErr").textContent = ""; udlg.showModal ? udlg.showModal() : udlg.setAttribute("open", ""); setTimeout(() => $("#uCode").focus(), 50); }
+$("#uCancel").onclick = () => udlg.close();
+$("#uForm").onsubmit = async ev => {
+  ev.preventDefault();
+  const code = $("#uCode").value.trim(), btn = $("#uForm button[type=submit]");
+  if (!code) return $("#uErr").textContent = "Entre le code.";
+  btn.disabled = true; $("#uErr").textContent = "Vérification…";
+  try { await unlock(code, $("#uRemember").checked); udlg.close(); toast("Accès privé ouvert"); await render(); }
+  catch (e) { $("#uErr").textContent = e.message === "code" ? "Code incorrect." : "Impossible de charger les détails. Ouvre le site une fois avec du réseau, puis réessaie."; }
+  btn.disabled = false;
+};
+function lock() { ls.set("cv-code", null); location.reload(); }
+
+/* ---------- photos du récap public ----------
+   Dans la visionneuse, « Récap public » marque une photo ; « Préparer l'envoi » crée un .zip
+   à déposer sur GitHub (dossier photos/<voyage>/), qui contient les photos et la liste photos.js. */
+function publishPanel() {
+  const local = PHOTOS.filter(p => !p.src), want = local.filter(p => p.wantPub), online = ((self.PUBPHOTOS || {})[trip.id] || []).length;
+  return `<div class="card panel" style="margin-top:22px"><h3>${tile("world", "mint")}Récap public</h3>
+   <p class="small" style="margin:0 0 12px">${online ? `${plural(online, "photo")} en ligne dans le récap public. ` : "Aucune photo dans le récap public pour l'instant. "}Pour en ajouter une, ouvre-la et touche « Récap public ». ${want.length ? `<b>${plural(want.length, "photo")} choisie${want.length > 1 ? "s" : ""}.</b>` : ""}</p>
+   ${want.length || online ? `<div class="toolbar" style="margin-top:0"><button class="btn solid" data-publish>${ic("upload")}Préparer l'envoi sur GitHub</button></div>
+   <p class="small" style="margin-top:10px">Tu obtiens un fichier .zip : décompresse-le, puis sur GitHub, ouvre ton dépôt, « Add file » → « Upload files », glisse le dossier <b>photos</b> et valide. Les photos apparaissent dans le récap en une à deux minutes.</p>` : ""}</div>`;
+}
+const slug = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+async function publishZip() {
+  toast("Préparation du fichier…", 60000);
+  if (!self.JSZip) await loadScript("lib/jszip.min.js");
+  if (!self.JSZip) return toast("Ouvre le site une fois avec du réseau pour préparer l'envoi.");
+  const id = trip.id, zip = new JSZip(), dir = zip.folder("photos").folder(id);
+  const local = PHOTOS.filter(p => !p.src);
+  const unpublished = new Set(local.filter(p => p.pubName && !p.wantPub).map(p => p.pubName));
+  const list = ((self.PUBPHOTOS || {})[id] || []).filter(x => !unpublished.has(x.f));
+  for (const p of local.filter(p => p.wantPub)) {
+    const [, d, ...n] = p.key.split("|");
+    const f = p.pubName || `${d}-${slug(n.join("|")) || "photo"}-${p.id.slice(-6)}.jpg`;
+    dir.file(f, p.blob);
+    const entry = { f, k: d + "|" + n.join("|"), c: p.caption || "" };
+    const k = list.findIndex(x => x.f === f); if (k >= 0) list[k] = entry; else list.push(entry);
+    if (p.pubName !== f) { p.pubName = f; try { await DB.put("photos", p); } catch (e) {} }
+  }
+  dir.file("photos.js", `/* Photos visibles dans le récap public de ${trip.title}.\n   Ce fichier est remplacé quand tu envoies tes photos depuis l'onglet Photos (accès privé). */\n(self.PUBPHOTOS = self.PUBPHOTOS || {})[${JSON.stringify(id)}] = ${JSON.stringify(list, null, 1)};\n`);
+  const blob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `photos-${id}-a-envoyer.zip`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`Fichier prêt : ${plural(list.length, "photo")} dans le récap`);
+}
+
+/* ---------- convertisseur euros ↔ livres ---------- */
+const RATE_KEY = "cv-taux";
+function getRate() { const r = ls.get(RATE_KEY); return r && r.v > 0 ? r : { v: (trip && trip.rate) || 1.16 }; }
+async function refreshRate(force) {
+  if (!navigator.onLine) return;
+  const r = ls.get(RATE_KEY);
+  if (!force && r && (r.manual || r.date === isoToday())) return;
+  try {
+    const j = await (await fetch("https://api.frankfurter.app/latest?from=GBP&to=EUR")).json();
+    if (j && j.rates && j.rates.EUR > 0) { ls.set(RATE_KEY, { v: j.rates.EUR, date: isoToday(), src: j.date }); $$("[data-convrate]").forEach(el => el.textContent = rateTxt(getRate())); }
+  } catch (e) {}
+}
+const num = (n, d = 2) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+function rateTxt(r) {
+  const when = r.src ? `taux du ${parts(r.src).d} ${MOIS[parts(r.src).m - 1]}` : r.manual ? "taux saisi à la main" : "taux approximatif, mis à jour dès qu'il y a du réseau";
+  return `1 £ = ${num(r.v)} €, 1 € = ${num(1 / r.v)} £ (${when})`;
+}
+const euroRange = (lo, hi) => { const v = getRate().v; return lo === hi ? num(lo * v, 0) + " €" : num(lo * v, 0) + " – " + num(hi * v, 0) + " €"; };
+function convHTML() {
+  if (!PRIV) return "";
+  return `<div class="card panel conv"><h3>${tile("arrows-exchange", "sky")}Convertisseur</h3>
+   <div class="convrow">
+    <label><span>Euros</span><input data-conv="eur" inputmode="decimal" placeholder="10" autocomplete="off"></label>
+    <span class="convx" aria-hidden="true">=</span>
+    <label><span>Livres</span><input data-conv="gbp" inputmode="decimal" placeholder="${num(10 / getRate().v)}" autocomplete="off"></label>
+   </div>
+   <p class="small" data-convrate>${rateTxt(getRate())}</p>
+   ${navigator.onLine ? `<button class="link" data-rate-refresh>${getRate().manual ? "Utiliser le taux du jour" : "Actualiser le taux"}</button>` : ""}</div>`;
+}
+function bindConv(root) {
+  $$(".conv", root).forEach(box => {
+    const e = $('[data-conv="eur"]', box), g = $('[data-conv="gbp"]', box);
+    const val = x => parseFloat(String(x.value).replace(/\s/g, "").replace(",", "."));
+    e.oninput = () => { const v = val(e); g.value = v >= 0 ? num(v / getRate().v) : ""; };
+    g.oninput = () => { const v = val(g); e.value = v >= 0 ? num(v * getRate().v) : ""; };
+  });
 }
 
 /* ---------- interactions ---------- */
@@ -778,6 +931,7 @@ function bindView() {
   const sel = $('.daybtn[aria-current="page"]'); if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
   if (section === "photos") showStorage();
   if (section === "comptes") bindComptes(v);
+  bindConv(v);
 }
 document.addEventListener("change", e => {
   const a = e.target.closest("[data-addph]"); if (a) { addPhotos(a.dataset.addph, a.files, a); a.value = ""; return; }
@@ -788,6 +942,10 @@ document.addEventListener("click", async e => {
   const tk = e.target.closest("[data-tk]"); if (tk) return openTicketDialog(tk.dataset.tk, tk.dataset.title);
   if (e.target.closest("[data-export]")) return exportAll();
   if (e.target.closest("[data-addexp]")) return openExp();
+  if (e.target.closest("[data-unlock]")) return openUnlock();
+  if (e.target.closest("[data-lock]")) return lock();
+  if (e.target.closest("[data-publish]")) return publishZip();
+  if (e.target.closest("[data-rate-refresh]")) { const r = ls.get(RATE_KEY); if (r && r.manual) ls.set(RATE_KEY, null); await refreshRate(true); if (!route.home) refresh(); return toast("Taux mis à jour"); }
   const st = e.target.closest("[data-settle]");
   if (st) { const [from, to, amt] = st.dataset.settle.split("|"), c = getC(); c.exp.push({ id: uid("e"), created: Date.now(), kind: "rembt", title: nameOf(c, from) + " → " + nameOf(c, to), amount: +amt, cur: "€", paidBy: from, split: [to], date: isoToday() }); setC(c); refresh(); return toast("Remboursement enregistré"); }
   const o = e.target.closest("[data-open]"); if (o) return openFile(o.dataset.open, +o.dataset.f);
@@ -803,10 +961,12 @@ function toast(msg, ms) { const t = $("#toast"); t.textContent = msg; t.hidden =
 
 /* ---------- démarrage ---------- */
 (async () => {
-  await Promise.all((self.VOYAGES || []).map(id => loadScript("voyages/" + encodeURIComponent(id) + ".js")));
+  await Promise.all((self.VOYAGES || []).flatMap(id => [loadScript("voyages/" + encodeURIComponent(id) + ".js"), loadScript("photos/" + encodeURIComponent(id) + "/photos.js")]));
   TRIPS = (self.VOYAGES || []).map(id => self.TRIPS && self.TRIPS[id]).filter(t => t && t.days && t.days.length);
   if (!TRIPS.length) { $("#app").innerHTML = `<header class="homehead"><div><h1>Mes voyages</h1><p>Aucun voyage trouvé. Vérifie la liste dans voyages.js.</p></div></header>`; return; }
   try { await DB.open(); await migrateOld(); } catch (e) { DB.ok = false; }
+  const saved = ls.get("cv-code");
+  if (saved) { try { await unlock(saved, true); } catch (e) { if (e.message === "code") ls.set("cv-code", null); } }
   // un seul voyage en cours ? on l'ouvre directement à l'ouverture de l'appli
   if (!location.hash) { const now = TRIPS.find(t => tripState(t).k === "now"); if (now) history.replaceState(null, "", "#/" + now.id); }
   await render();

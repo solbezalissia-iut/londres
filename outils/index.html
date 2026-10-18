@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modifier un voyage</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<style>
+@font-face{font-family:"Nunito";font-weight:500;src:url(../fonts/nunito-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito";font-weight:800;src:url(../fonts/nunito-latin-800-normal.woff2) format("woff2")}
+:root{--bg:#f3f0fd;--surface:#fff;--fg:#2b2550;--muted:#7b74a8;--primary:#6c5ce7;--soft:#ebe7ff;--danger:#e5484d;--ok:#0b6a49;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#15132a;--surface:#221f3c;--fg:#f1eeff;--muted:#a8a2d4;--primary:#a093ff;--soft:#2e2858;--danger:#ff7b80;--ok:#9ee8c8;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:500 15.5px/1.55 "Nunito",system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:28px 16px 60px}
+h1{font-weight:800;font-size:2rem;margin:8px 0 4px}
+h2{font-weight:800;font-size:1.2rem;margin:0 0 6px}
+p{margin:0 0 10px}
+a{color:var(--primary);font-weight:800}
+.card{background:var(--surface);border-radius:24px;padding:20px;margin-top:16px;box-shadow:0 8px 24px rgba(78,62,170,.08)}
+.muted{color:var(--muted)}
+ol{padding-left:20px;margin:6px 0 12px}
+li{margin-bottom:4px}
+label{display:grid;gap:5px;font-weight:800;font-size:13.5px;margin-bottom:12px}
+input,select{font:inherit;font-size:16px;padding:11px 13px;border:0;border-radius:14px;background:var(--bg);color:var(--fg);width:100%}
+button{font:inherit;font-weight:800;font-size:15px;min-height:46px;padding:10px 20px;border-radius:999px;border:0;cursor:pointer;background:var(--primary);color:#fff}
+button.soft{background:var(--soft);color:var(--primary)}
+.msg{font-weight:800;margin-top:10px;min-height:1.2em}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--ok)}
+code{background:var(--bg);padding:1px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="../">‹ Retour au site</a>
+  <h1>Modifier un voyage</h1>
+  <p class="muted">Les détails de chaque voyage (horaires, trajets, réservations) sont chiffrés avec le code. Cette page sert à les modifier sans jamais mettre le texte en clair sur GitHub. Tout se passe dans ton navigateur.</p>
+
+  <section class="card">
+    <h2>1. Récupérer le fichier modifiable</h2>
+    <label>Voyage<select id="trip"></select></label>
+    <label>Code<input id="code1" type="password" inputmode="numeric" autocomplete="off"></label>
+    <button id="get">Télécharger le fichier modifiable</button>
+    <button class="soft" id="model" type="button">Partir du modèle (nouveau voyage)</button>
+    <div class="msg" id="m1"></div>
+    <p class="muted" style="margin-top:12px">Tu obtiens un fichier <code>.prive.js</code>. Ouvre-le avec un éditeur de texte (Bloc-notes, TextEdit en mode texte brut, VS Code…), modifie le programme, puis passe à l'étape 2. Ne l'envoie pas tel quel sur GitHub.</p>
+  </section>
+
+  <section class="card">
+    <h2>2. Chiffrer et préparer l'envoi</h2>
+    <label>Ton fichier modifié (.prive.js)<input id="file" type="file" accept=".js,text/javascript,text/plain"></label>
+    <label>Code<input id="code2" type="password" inputmode="numeric" autocomplete="off"></label>
+    <button id="make">Créer le fichier à envoyer</button>
+    <div class="msg" id="m2"></div>
+    <p class="muted" style="margin-top:12px">Tu obtiens un fichier <code>.zip</code>. Décompresse-le, puis sur GitHub :</p>
+    <ol class="muted">
+      <li>Ouvre ton dépôt, puis « Add file » → « Upload files ».</li>
+      <li>Glisse les dossiers <b>voyages</b> et <b>prive</b> qui sont dans le zip.</li>
+      <li>Clique sur « Commit changes ». Le site est à jour en une à deux minutes.</li>
+      <li>Pour un nouveau voyage, ajoute aussi son nom dans <code>voyages.js</code>.</li>
+    </ol>
+  </section>
+</div>
+<script src="../voyages.js"></script>
+<script src="carnet-build.js"></script>
+<script src="../lib/jszip.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const save = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+const msg = (el, t, k) => { el.textContent = t; el.className = "msg " + (k || ""); };
+$("#trip").innerHTML = (self.VOYAGES || []).map(v => `<option>${v}</option>`).join("");
+$("#get").onclick = async () => {
+  const id = $("#trip").value, code = $("#code1").value.trim(), m = $("#m1");
+  if (!code) return msg(m, "Entre le code.", "err");
+  msg(m, "Déchiffrement…");
+  try {
+    const r = await fetch("../prive/" + encodeURIComponent(id) + ".enc.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("absent");
+    const text = await CarnetBuild.decrypt(await r.json(), code);
+    save(new Blob([text], { type: "text/javascript" }), id + ".prive.js");
+    msg(m, "Fichier téléchargé : " + id + ".prive.js", "ok");
+  } catch (e) { msg(m, e.message === "absent" ? "Ce voyage n'a pas encore de fichier privé : pars du modèle." : "Code incorrect.", "err"); }
+};
+$("#model").onclick = async () => {
+  const r = await fetch("../voyages/modele.js"); save(new Blob([await r.text()], { type: "text/javascript" }), "nouveau.prive.js");
+  msg($("#m1"), "Modèle téléchargé : renomme-le (ex. rome.prive.js) et remplace « modele » par le nom du voyage.", "ok");
+};
+$("#make").onclick = async () => {
+  const f = $("#file").files[0], code = $("#code2").value.trim(), m = $("#m2");
+  if (!f) return msg(m, "Choisis ton fichier .prive.js.", "err");
+  if (!code) return msg(m, "Entre le code.", "err");
+  msg(m, "Chiffrement…");
+  try {
+    const text = await f.text();
+    let t; try { t = CarnetBuild.evalTrip(text); } catch (e) { throw new Error("Le fichier contient une erreur : " + e.message); }
+    if (!t.id || !Array.isArray(t.days)) throw new Error("Le fichier doit contenir un id et une liste days.");
+    const zip = new JSZip();
+    zip.folder("voyages").file(t.id + ".js", CarnetBuild.publicFile(t));
+    zip.folder("prive").file(t.id + ".enc.json", JSON.stringify(await CarnetBuild.encrypt(text, code)));
+    save(await zip.generateAsync({ type: "blob" }), "voyage-" + t.id + "-a-envoyer.zip");
+    msg(m, "Fichier prêt : voyage-" + t.id + "-a-envoyer.zip", "ok");
+  } catch (e) { msg(m, e.message, "err"); }
+};
+</script>
+</body>
+</html>

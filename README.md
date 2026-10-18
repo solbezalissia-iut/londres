@@ -22,6 +22,10 @@ Ouvre l'adresse dans Safari (iPhone) ou Chrome (Android), puis **Partager → Su
 - Sur chaque étape payante ou réservée : bouton **« Ajouter un billet »**, ou onglet **Billets**.
 - PDF, photos ou captures d'écran, avec le numéro de réservation.
 
+## Convertisseur
+
+En accès privé, dans Budget, Comptes, Infos et sur le côté du programme : tape un montant en euros ou en livres, l'autre se calcule. Le taux du jour est récupéré dès qu'il y a du réseau (sinon le dernier connu), et les prix des activités affichent aussi leur équivalent en euros.
+
 ## Comptes (comme Tricount)
 
 Onglet **Comptes** : entre les prénoms des voyageurs, puis ajoute chaque dépense (quoi, combien, en € ou en £, qui a payé, pour qui). Chaque dépense est partagée en parts égales entre les personnes cochées, et le site calcule les soldes et qui doit combien à qui. « Marquer comme remboursé » enregistre le remboursement.
@@ -40,19 +44,30 @@ Les billets déjà enregistrés avec l'ancienne version du site sont repris auto
 
 ⚠️ Ne mets jamais tes billets ou photos dans le dépôt GitHub.
 
+## Récap public et accès privé
+
+- **Sans code**, tout le monde voit le récap : les voyages, les activités de chaque jour et les photos que tu as choisi de publier. Pas d'horaires, d'hôtel, de vols, de trajets, de prix ni de réservations.
+- **Avec le code** (bouton « Accès privé »), tu retrouves tout : programme détaillé, billets, budget, comptes, convertisseur, infos. Coche « Rester déverrouillé sur cet appareil » pour ne pas le retaper (bouton cadenas pour verrouiller).
+- Les détails sont dans `prive/<voyage>.enc.json`, **chiffrés avec le code** (AES-256, clé dérivée par PBKDF2). Le code n'est écrit nulle part dans le dépôt.
+
+### Publier des photos dans le récap
+
+Accès privé → ouvre une photo → **Récap public**. Puis onglet Photos → **Préparer l'envoi sur GitHub** : décompresse le zip et dépose le dossier `photos` sur GitHub (« Add file » → « Upload files »). Les photos publiées sont visibles par tout le monde.
+
 ## Modifier un voyage
 
-Chaque voyage a son fichier dans le dossier **`voyages/`** (ex. `voyages/londres.js`) : jours, horaires, adresses, trajets, prix.
-Sur GitHub, ouvre le fichier → icône crayon ✏️ → modifie → **Commit changes**. Le site se met à jour en 1 à 2 minutes.
+Le programme étant chiffré, on ne le modifie plus directement sur GitHub. Utilise la page **Modifier un voyage** (`/outils/` sur ton site, lien depuis l'accueil en accès privé) :
 
-Ne renomme pas une étape où tu as déjà mis des photos ou des billets : ils y sont rattachés par son nom (sinon ils passent dans « Autres photos »).
+1. **Télécharger le fichier modifiable** avec le code : tu obtiens `londres.prive.js`.
+2. Modifie-le avec un éditeur de texte (jours, horaires, adresses, trajets, prix).
+3. **Créer le fichier à envoyer** : choisis ton fichier, entre le code, tu obtiens un zip.
+4. Décompresse-le et dépose les dossiers `voyages` et `prive` sur GitHub (« Add file » → « Upload files » → « Commit changes »).
+
+Ne mets jamais le fichier `.prive.js` lui-même sur GitHub.
 
 ## Ajouter un voyage
 
-1. Dans le dossier `voyages/`, ouvre `modele.js`, copie son contenu et crée un nouveau fichier, par exemple `voyages/rome.js`.
-2. Dans ce nouveau fichier, remplace `modele` par `rome` aux deux endroits indiqués, puis remplis le programme.
-3. Ouvre `voyages.js` et ajoute le nom : `self.VOYAGES = ["londres", "rome"];`
-4. **Commit changes** : le voyage apparaît sur la page d'accueil.
+Page **Modifier un voyage** → « Partir du modèle », remplis le fichier, crée le zip comme ci-dessus et dépose-le, puis ajoute le nom du voyage dans `voyages.js`.
 
 ## Fichiers
 
@@ -61,7 +76,11 @@ Ne renomme pas une étape où tu as déjà mis des photos ou des billets : ils y
 | `index.html` | page et styles |
 | `app.js` | fonctionnement du site |
 | `voyages.js` | liste des voyages |
-| `voyages/*.js` | contenu de chaque voyage |
+| `voyages/*.js` | récap public de chaque voyage (créé par l'outil) |
+| `prive/*.enc.json` | détails de chaque voyage, chiffrés avec le code |
+| `photos/<voyage>/` | photos du récap public |
+| `outils/` | page pour modifier un voyage, chiffrement |
+| `lib/`, `fonts/`, `icons.js` | bibliothèque zip, police et icônes (pour marcher hors ligne) |
 | `sw.js` | mise en cache pour l'usage hors connexion |
 | `manifest.webmanifest`, `icon*` | installation sur l'écran d'accueil |
 
