@@ -648,18 +648,24 @@ const euro = n => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumF
 function paidBlock() {
   const P = trip.paid || []; if (!P.length) return "";
   const tot = P.reduce((a, x) => a + x[2], 0), np = trip.people || 1;
+  const solo = P.filter(x => x[3] && x[3].solo), soloTot = solo.reduce((a, x) => a + x[2], 0), shared = tot - soloTot;
   return `<h2 class="pageh" style="margin-top:8px">Déjà réservé</h2>
    <p class="daysub">Payé pour tout le groupe, en euros${np > 1 ? `, puis divisé par ${np} voyageurs` : ""}.</p>
    <div class="sum"><div><span class="small">Total réglé</span><span class="big">${euro(tot)}</span></div>
-     ${np > 1 ? `<div><span class="small">Par personne</span><span class="big">${euro(tot / np)}</span></div>` : ""}</div>
-   <div class="card rows">${P.map(x => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span><span class="bd">${esc(x[1])}</span><span class="bs small">${np > 1 ? euro(x[2] / np) + " / pers." : ""}</span></div>`).join("")}</div>
+     ${np > 1 ? `<div><span class="small">Par personne${soloTot ? " (partie commune)" : ""}</span><span class="big">${euro(shared / np)}</span></div>` : ""}</div>
+   ${np > 1 && soloTot ? `<p class="small" style="margin-top:8px">En plus, pour une seule personne : ${solo.map(x => `${esc(x[0].replace(/ \(1 personne\)/, ""))} ${euro(x[2])}`).join(", ")}.</p>` : ""}
+   <div class="card rows">${P.map(x => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span><span class="bd">${esc(x[1])}</span><span class="bs small">${x[3] && x[3].solo ? "pour 1 personne" : np > 1 ? euro(x[2] / np) + " / pers." : ""}</span></div>`).join("")}</div>
    <div class="toolbar"><a class="btn" href="${href("comptes")}">${ic("scale")}Qui a payé quoi ? Voir les comptes</a></div>`;
 }
 
 /* ---------- comptes partagés (façon Tricount) ----------
    Enregistrés sur l'appareil : { people:[{id,name}], exp:[{id,title,amount,cur,paidBy,split:[ids],date,kind,paidRef}], rate } */
 const CK = () => "cv-comptes-" + trip.id;
-const getC = () => { const c = ls.get(CK()) || {}; return { people: c.people || [], exp: c.exp || [], rate: getRate().v }; };
+const getC = () => {
+  const c = ls.get(CK()) || {}, exp = c.exp || [];
+  exp.forEach(e => { const x = e.paidRef != null && (trip.paid || [])[e.paidRef]; if (x && (e.amount !== x[2] || e.title !== x[0])) { e.amount = x[2]; e.title = x[0]; } });
+  return { people: c.people || [], exp, rate: getRate().v };
+};
 const setC = c => ls.set(CK(), c);
 const toEur = (e, c) => e.cur === "£" ? e.amount * c.rate : e.amount;
 const nameOf = (c, id) => (c.people.find(p => p.id === id) || { name: "?" }).name;
@@ -722,7 +728,7 @@ function comptesView() {
    ${pendingPaid.length ? `<div class="card panel" style="margin-top:16px"><h3>${tile("receipt", "butter")}Réservations à attribuer</h3>
      <p class="small" style="margin:-4px 0 10px">Indique qui a payé chaque réservation (ou « Pas encore payé ») pour l'ajouter aux comptes.</p>
      ${pendingPaid.map(([x, i]) => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span>
-       <span class="bd"><select data-paidsel="${i}" aria-label="Qui a payé ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Payé par…</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}<option value="none">Pas encore payé</option></select></span><span></span></div>`).join("")}
+       <span class="bd"><select data-paidsel="${i}" aria-label="Qui a payé ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Payé par…</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}<option value="none">Pas encore payé</option></select>${x[3] && x[3].solo ? ` <select data-forsel="${i}" aria-label="Pour qui : ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Pour qui ?</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>` : ""}</span><span></span></div>`).join("")}
    </div>` : ""}
 
    <div class="card panel" style="margin-top:16px"><h3>${tile("scale", "mint")}Soldes</h3>
@@ -810,11 +816,15 @@ function bindComptes(v) {
   if (a) a.onsubmit = ev => { ev.preventDefault(); const n = $("#cNew").value.trim(); if (!n) return; const c = getC(); c.people.push({ id: uid("u"), name: n }); setC(c); refresh(); toast(n + " ajouté·e aux comptes"); };
   const r = $("#cRate", v);
   if (r) r.onchange = () => { const x = parseFloat(String(r.value).replace(",", ".")); if (x > 0) { ls.set(RATE_KEY, { v: x, manual: true }); refresh(); } };
-  $$("[data-paidsel]", v).forEach(s => s.onchange = () => {
-    if (!s.value) return; const i = +s.dataset.paidsel, x = trip.paid[i], c = getC();
-    c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value === "none" ? "" : s.value, split: c.people.map(p => p.id), date: "", paidRef: i });
+  const addPaid = i => {
+    const s = $(`[data-paidsel="${i}"]`, v), f = $(`[data-forsel="${i}"]`, v), x = trip.paid[i];
+    if (!s.value || (f && !f.value)) return; // pour une seule personne : il faut aussi « pour qui »
+    const c = getC();
+    c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value === "none" ? "" : s.value, split: f ? [f.value] : c.people.map(p => p.id), date: "", paidRef: i });
     setC(c); refresh(); toast("Ajouté aux comptes");
-  });
+  };
+  $$("[data-paidsel]", v).forEach(s => s.onchange = () => addPaid(+s.dataset.paidsel));
+  $$("[data-forsel]", v).forEach(s => s.onchange = () => addPaid(+s.dataset.forsel));
   $$("[data-editexp]", v).forEach(row => {
     const go = () => openExp(getC().exp.find(e => e.id === row.dataset.editexp));
     row.onclick = ev => { if (!ev.target.closest("[data-sexp]")) go(); };
