@@ -15,16 +15,38 @@ const ls = {
 const plural = (n, a, b) => n + " " + (n > 1 ? (b || a + "s") : a);
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-const I = {
-  route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="M6 7.2v4.3a3 3 0 0 0 3 3h6a3 3 0 0 1 3 3v-.3"/></svg>',
-  photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
-  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" transform="translate(0 2)"/><path d="M14 6v2M14 11v2M14 16v2"/></svg>',
-  coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 8.5a2.5 2.5 0 0 0-4.5 1.5c0 3 0 4-1.5 5.5h6.5M8.5 12.5h5"/></svg>',
-  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>',
-  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
-  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
-};
-const SECTIONS = [["programme", "Programme", I.route], ["photos", "Photos", I.photo], ["billets", "Billets", I.ticket], ["budget", "Budget", I.coin], ["infos", "Infos", I.info]];
+/* icônes (icons.js) */
+const ic = (n, cls) => `<svg class="i${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(self.ICONS || {})[n] || (self.ICONS || {})["map-pin"] || ""}</svg>`;
+const I = { route: ic("route"), photo: ic("camera"), ticket: ic("ticket"), coin: ic("coin"), info: ic("info-circle"), back: ic("chevron-left"), plus: ic("plus") };
+const SECTIONS = [["programme", "Programme", I.route], ["photos", "Photos", I.photo], ["billets", "Billets", I.ticket], ["budget", "Budget", I.coin], ["comptes", "Comptes", ic("scale")], ["infos", "Infos", I.info]];
+
+/* une icône et une couleur pastel par étape, devinées d'après son nom (ou s.ic dans les données) */
+const RULES = [
+  [/décollage|aéroport|arrivée à gatwick|\(lgw\)/, "plane"], [/transfert|uber|taxi/, "car"],
+  [/croisière|uber boat|bateau/, "ship"], [/téléphérique|cable car/, "cloud"],
+  [/train|thameslink|elizabeth line →|navette|euston|watford|retour vers londres/, "train"],
+  [/hôtel|check-in/, "bed"], [/harry potter|warner/, "wand"], [/london eye/, "building-carousel"],
+  [/déjeuner|dîner/, "tools-kitchen-2"], [/cakes|gâteau|café/, "cake"], [/fleur|flower/, "flower"],
+  [/sky garden|horizon 22|garden at 120|canary wharf/, "building-skyscraper"],
+  [/museum|gallery|collection|tate/, "building-bank"], [/bridge/, "building-bridge"],
+  [/st paul|dunstan|cathedral/, "building-church"], [/tour de londres|garde|palace|big ben/, "building-castle"],
+  [/de nuit/, "moon-stars"], [/primrose|coucher/, "sunset"], [/street arches|leake/, "spray"],
+  [/outernet/, "device-tv"], [/babylon/, "confetti"],
+  [/market|marché/, "shopping-bag"], [/harrods|hamleys|disney|selfridges|lego|westfield|shopping|boutiques|bagages/, "building-store"],
+  [/piccadilly|chinatown|leicester|covent|neal|soho|marylebone|notting/, "star"],
+  [/park|gardens|venice|kensington/, "trees"], [/statue|ours/, "crown"], [/temps libre|soirée/, "sparkles"]
+];
+const TONE = { plane: "sky", car: "sky", ship: "sky", cloud: "sky", train: "sky", bed: "lilac", wand: "pink", "building-carousel": "pink",
+  "tools-kitchen-2": "peach", cake: "peach", flower: "mint", "building-skyscraper": "lilac", "building-bank": "butter", "building-bridge": "butter",
+  "building-church": "butter", "building-castle": "butter", "moon-stars": "lilac", sunset: "peach", spray: "pink", "device-tv": "pink", confetti: "pink",
+  "shopping-bag": "peach", "building-store": "pink", star: "pink", trees: "mint", crown: "butter", sparkles: "lilac", "map-pin": "lilac" };
+function stopIcon(s) {
+  if (s.ic) return s.ic;
+  const n = (s.n || "").toLowerCase();
+  for (const [re, name] of RULES) if (re.test(n)) return name;
+  return "map-pin";
+}
+const tile = (name, tone, cls) => `<span class="tile t-${tone || TONE[name] || "lilac"}${cls ? " " + cls : ""}">${ic(name)}</span>`;
 
 /* ---------- dates ---------- */
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -145,7 +167,7 @@ async function render() {
   if (!sec) { const st = tripState(trip); sec = st.day || ls.get("cv-last-" + trip.id) || trip.days[0].id; history.replaceState(null, "", href(sec)); }
   const di = trip.days.findIndex(d => d.id === sec);
   if (di >= 0) { section = "programme"; dayId = sec; ls.set("cv-last-" + trip.id, sec); }
-  else if (["photos", "billets", "budget", "infos"].includes(sec)) section = sec;
+  else if (["photos", "billets", "budget", "comptes", "infos"].includes(sec)) section = sec;
   else { location.hash = href(trip.days[0].id); return; }
   renderTrip();
 }
@@ -161,7 +183,7 @@ function refresh() { const y = window.scrollY; renderTrip(); window.scrollTo(0, 
 /* ---------- accueil ---------- */
 async function renderHome() {
   document.title = "Mes voyages";
-  setTheme(TRIPS[0]);
+  setTheme();
   const stats = {};
   await Promise.all(TRIPS.map(async t => {
     let ph = [];
@@ -173,49 +195,57 @@ async function renderHome() {
     const pa = tripState(a).k === "past", pb = tripState(b).k === "past";
     return pa !== pb ? (pa ? 1 : -1) : (pa ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start));
   });
+  const next = order.find(t => tripState(t).k !== "past");
+  const hi = next ? (tripState(next).k === "now" ? `Bon voyage à ${next.title} !` : `Bonjour ! ${tripState(next).txt}`) : "Bonjour !";
   $("#app").innerHTML = `
-   <header class="homehead"><div><h1>Mes voyages</h1><p>Programme jour par jour, trajets, photos et billets. Tout reste disponible sans réseau.</p></div>${netPill()}</header>
+   <header class="hello"><div><p class="hi">${esc(hi)}</p><h1>Mes voyages</h1></div>${netPill()}</header>
    <div class="trips">${order.map(t => {
      const st = tripState(t), s = stats[t.id];
-     return `<a class="trip ${st.k}" href="#/${esc(t.id)}" style="--c:${esc(t.color)};--a:${esc(t.accent)}">
-       <div class="cover${s.cover ? "" : " noimg"}">${s.cover ? `<img alt="" data-cover="${s.cover.id}">` : ""}
-         <div class="lines" aria-hidden="true">${t.days.map(d => `<i style="background:${esc(d.c)}"></i>`).join("")}</div></div>
+     return `<a class="trip card ${st.k}" href="#/${esc(t.id)}">
+       <div class="cover">${s.cover ? `<img alt="" data-cover="${s.cover.id}">` : `<div class="mosaic" aria-hidden="true">${highlights(t).map(n => tile(n)).join("")}</div>`}</div>
        <div class="tinfo">
-         <div class="tstatus">${esc(st.txt)}</div>
-         <h2>${esc(t.title)}</h2>
-         <div class="tdates">${esc(range(t.start, t.end))}${t.country ? ", " + esc(t.country) : ""}</div>
+         <div class="trow"><h2>${esc(t.title)}</h2><span class="pill">${esc(st.k === "soon" ? st.txt.replace("Départ d", "D") : st.txt)}</span></div>
+         <div class="tmeta">${ic("calendar")}${esc(range(t.start, t.end))}${t.country ? ", " + esc(t.country) : ""}</div>
          ${t.summary ? `<p>${esc(t.summary)}</p>` : ""}
-         <div class="tcounts"><span><b>${t.days.length}</b>jours</span><span><b>${s.stops}</b>étapes</span><span><b>${s.photos}</b>photo${s.photos > 1 ? "s" : ""}</span></div>
+         <div class="chips"><span>${plural(t.days.length, "jour")}</span><span>${plural(s.stops, "étape")}</span><span>${plural(s.photos, "photo")}</span></div>
        </div></a>`;
    }).join("")}</div>
-   <section class="howto"><h2>Ajouter un voyage</h2><p>Sur GitHub, copie le fichier <b>voyages/modele.js</b> sous un nouveau nom (par exemple <b>voyages/rome.js</b>), remplis-le, puis ajoute son nom dans <b>voyages.js</b>. Le nouveau voyage apparaît ici une à deux minutes plus tard.</p></section>
+   <section class="howto card">${tile("plus", "lilac")}<div><h2>Ajouter un voyage</h2><p>Sur GitHub, copie le fichier <b>voyages/modele.js</b> sous un nouveau nom (par exemple <b>voyages/rome.js</b>), remplis-le, puis ajoute son nom dans <b>voyages.js</b>. Le nouveau voyage apparaît ici une à deux minutes plus tard.</p></div></section>
    <footer>Les photos, billets et cases cochées sont enregistrés uniquement sur cet appareil.</footer>`;
   $$("img[data-cover]").forEach(img => { const id = img.dataset.cover; for (const t of TRIPS) { const c = stats[t.id].cover; if (c && c.id === id) img.src = objURL("cover:" + id, c.thumb || c.blob); } });
 }
-function setTheme(t) { const m = $('meta[name="theme-color"]'); if (m && t) m.content = t.color; }
+/* six étapes phares aux icônes différentes, pour la couverture sans photo */
+function highlights(t) {
+  const out = [], seen = new Set(["map-pin", "plane", "car", "bed", "train", "tools-kitchen-2", "sparkles"]);
+  for (const pass of [1, 0]) for (const d of t.days) for (const s of d.stops) {
+    if (out.length >= 6) break;
+    if (pass && !s.major) continue;
+    const n = stopIcon(s); if (!seen.has(n)) { seen.add(n); out.push(n); }
+  }
+  while (out.length < 6) out.push(["map-pin", "camera", "plane", "star", "trees", "sparkles"][out.length]);
+  return out;
+}
+function setTheme() { const m = $('meta[name="theme-color"]'); if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f3f0fd"; }
 const netPill = () => `<span class="net" data-net ${navigator.onLine ? "hidden" : ""}>Hors ligne</span>`;
 function updateNet() { $$("[data-net]").forEach(n => n.hidden = navigator.onLine); }
 window.addEventListener("online", updateNet); window.addEventListener("offline", updateNet);
 
 /* ---------- page voyage ---------- */
+const factIcon = l => /hôtel|logement/i.test(l) ? ["bed", "lilac"] : /arriv/i.test(l) ? ["plane-arrival", "sky"] : /départ|retour/i.test(l) ? ["plane-departure", "peach"] : ["info-circle", "mint"];
 function renderTrip() {
   const t = trip, st = tripState(t);
   document.title = t.title + " · Mes voyages";
-  setTheme(t);
-  document.documentElement.style.setProperty("--c", t.color); document.documentElement.style.setProperty("--a", t.accent);
+  setTheme();
   const counts = { photos: PHOTOS.length, billets: TICKETS.length };
-  const view = section === "programme" ? dayView() : section === "photos" ? photosView() : section === "billets" ? billetsView() : section === "budget" ? budgetView() : infosView();
+  const view = section === "programme" ? dayView() : section === "photos" ? photosView() : section === "billets" ? billetsView() : section === "budget" ? budgetView() : section === "comptes" ? comptesView() : infosView();
   $("#app").innerHTML = `
-   <div class="tripbar"><a class="back" href="#/">${I.back}Mes voyages</a>${netPill()}</div>
-   <header class="top">
-     <div class="ttl">
-       <h1>${esc(t.title)}</h1>
-       <div class="dates">${esc(range(t.start, t.end))}</div>
-       <div class="facts"><span class="status">${esc(st.txt)}</span>${(t.facts || []).map(f => `<span>${esc(f[0])} : <b>${esc(f[1])}</b></span>`).join("")}</div>
-     </div>
+   <div class="tripbar"><a class="iconbtn" href="#/" aria-label="Retour à mes voyages">${I.back}</a><span class="crumb">Mes voyages</span>${netPill()}</div>
+   <header class="hero card">
+     <div class="htop"><div><h1>${esc(t.title)}</h1><div class="hdates">${esc(range(t.start, t.end))}</div></div><span class="pill">${esc(st.txt)}</span></div>
+     ${(t.facts || []).length ? `<div class="hfacts">${t.facts.map(f => { const [n, tone] = factIcon(f[0]); return `<div class="fact">${tile(n, tone)}<div style="min-width:0"><small>${esc(f[0])}</small><b>${esc(f[1])}</b></div></div>`; }).join("")}</div>` : ""}
    </header>
-   <nav class="secnav" aria-label="Sections du voyage">${SECTIONS.filter(s => s[0] !== "budget" || (t.budget && t.budget.length) || (t.paid && t.paid.length)).map(([id, lab, ic]) =>
-     `<a href="${href(id === "programme" ? dayId || t.days[0].id : id)}" ${section === id ? 'aria-current="page"' : ""}>${ic}<span>${lab}</span>${counts[id] ? `<span class="n">${counts[id]}</span>` : ""}</a>`).join("")}</nav>
+   <nav class="secnav" aria-label="Sections du voyage">${SECTIONS.filter(s => s[0] !== "budget" || (t.budget && t.budget.length) || (t.paid && t.paid.length)).map(([id, lab, icn]) =>
+     `<a href="${href(id === "programme" ? dayId || t.days[0].id : id)}" ${section === id ? 'aria-current="page"' : ""}>${icn}<span>${lab}</span>${counts[id] ? `<span class="n">${counts[id]}</span>` : ""}</a>`).join("")}</nav>
    ${view}
    ${t.footer ? `<footer>${esc(t.footer)} Les photos, billets et cases cochées restent sur l'appareil qui les a enregistrés.</footer>` : ""}`;
   bindView();
@@ -224,60 +254,65 @@ function renderTrip() {
 function daysNav() {
   const today = isoToday();
   return `<div id="dayanchor"></div><nav class="days" aria-label="Jours du voyage"><div class="daylist">${trip.days.map((d, i) =>
-    `<a class="daybtn${d.light ? " light" : ""}" href="${href(d.id)}" style="--dc:${esc(d.c)}" ${d.id === dayId ? 'aria-current="page"' : ""}><span class="d1">Jour ${i + 1}</span><span class="d2">${esc(d.dow)} ${esc(d.label)}</span>${d.date === today ? '<span class="today" title="Aujourd\'hui"></span>' : ""}</a>`).join("")}</div></nav>`;
+    `<a class="daypill" href="${href(d.id)}" style="--dc:${esc(d.c)}" ${d.id === dayId ? 'aria-current="page"' : ""}><span class="dn"><i></i>Jour ${i + 1}</span><span class="dl">${esc(d.dow)} ${parts(d.date).d}</span>${d.date === today ? '<span class="today" title="Aujourd\'hui"></span>' : ""}</a>`).join("")}</div></nav>`;
 }
 
-function photoStrip(key, label) {
+function photoStrip(key) {
   const list = photosFor(key), max = 7, shown = list.length > max ? list.slice(0, max - 1) : list;
-  return `${list.length ? `<div class="phs">${shown.map(p => `<button class="pth" data-ph="${p.id}" data-pk="${esc(key)}" aria-label="Voir la photo${p.caption ? " : " + esc(p.caption) : ""}"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}
-      ${list.length > max ? `<button class="pth more" data-ph="${list[max - 1].id}" data-pk="${esc(key)}" aria-label="Voir les ${list.length} photos">+${list.length - max + 1}</button>` : ""}</div>` : ""}`;
+  return list.length ? `<div class="phs">${shown.map(p => `<button class="pth" data-ph="${p.id}" data-pk="${esc(key)}" aria-label="Voir la photo${p.caption ? " : " + esc(p.caption) : ""}"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}
+      ${list.length > max ? `<button class="pth more" data-ph="${list[max - 1].id}" data-pk="${esc(key)}" aria-label="Voir les ${list.length} photos">+${list.length - max + 1}</button>` : ""}</div>` : "";
 }
 const addPhotoBtn = key => `<label class="chip">${I.photo}Ajouter des photos<input type="file" class="vh" accept="image/*" multiple data-addph="${esc(key)}"></label>`;
+const legHTML = (s, from) => `<div class="leg">${ic(s.mode === "walk" ? "walk" : "bus")}${s.mode === "walk" ? "À pied" : "En transports"}${from ? ` depuis ${esc(from)}` : ""}</div>`;
 
 function stopHTML(d, s, i) {
   const t = trip, prev = i === 0 ? t.hotel && t.hotel.q : d.stops[i - 1].q;
-  const prevName = i === 0 ? "l'hôtel" : d.stops[i - 1].n;
-  const key = tKey(d, s), nt = ticketsFor(key).length, np = photosFor(key).length;
+  const prevName = s.from || (i === 0 ? "l'hôtel" : d.stops[i - 1].n);
+  const key = tKey(d, s), nt = ticketsFor(key).length;
   const how = (s.how || []).length ? `<details class="how"${i === 0 ? " open" : ""}>
      <summary><span>Comment y aller</span><span class="from">depuis ${esc(prevName)}</span></summary>
      <ol>${s.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
-     ${prev && prev !== s.q ? `<a class="mini" href="${mapsDir(t, prev, s.q, s.mode === "walk")}" target="_blank" rel="noopener">${s.mode === "walk" ? "Itinéraire à pied" : "Itinéraire en transports"} dans Google Maps ↗</a>` : ""}
+     ${prev && prev !== s.q ? `<a class="mini" href="${mapsDir(t, prev, s.q, s.mode === "walk")}" target="_blank" rel="noopener">${ic("map-2")}${s.mode === "walk" ? "Itinéraire à pied" : "Itinéraire en transports"} dans Google Maps</a>` : ""}
    </details>` : "";
-  return `<li class="stop${s.major ? " major" : ""}" id="${esc(d.id)}-${i}">
-    <div class="time">${esc(s.t)}</div><div class="tick"></div>
-    <div class="card">
-      <span class="ctime">${esc(s.t)}</span>
-      <h3><a href="${mapsSearch(t, s.q)}" target="_blank" rel="noopener">${esc(s.n)}</a></h3>
-      ${s.addr ? `<div class="addr">${esc(s.addr)}</div>` : ""}
+  return `<li id="${esc(d.id)}-${i}">
+    ${i > 0 ? legHTML(s) : ""}
+    <article class="card scard">
+      <div class="shead">${tile(stopIcon(s))}
+        <div class="smain"><div class="stime">${esc(s.t)}${s.major ? '<span class="must">Incontournable</span>' : ""}</div>
+          <h3><a href="${mapsSearch(t, s.q)}" target="_blank" rel="noopener">${esc(s.n)}</a></h3>
+          ${s.addr ? `<div class="addr">${esc(s.addr)}</div>` : ""}</div></div>
+      <div class="sbody">
       ${s.d ? `<p>${esc(s.d)}</p>` : ""}
-      ${s.tags ? `<div class="tags">${s.tags.map(g => `<span class="tag ${esc(g[1])}">${esc(g[0])}</span>`).join("")}</div>` : ""}
+      ${s.tags ? `<div class="tags">${s.tags.map(g => `<span class="pill ${esc(g[1])}">${esc(g[0])}</span>`).join("")}</div>` : ""}
       ${s.warn ? `<div class="alert">${esc(s.warn)}</div>` : ""}
       ${s.adj ? `<div class="adj"><b>Ajusté</b>${esc(s.adj)}</div>` : ""}
       ${how}
       ${photoStrip(key)}
-      <div class="acts">${addPhotoBtn(key, np)}
+      <div class="acts">${addPhotoBtn(key)}
       ${s.tk ? `<button class="chip tk${nt ? " has" : ""}" data-tk="${esc(key)}" data-title="${esc(s.n)}">${I.ticket}${nt ? `Billets (${nt})` : "Ajouter un billet"}</button>` : ""}</div>
-    </div></li>`;
+      </div>
+    </article></li>`;
 }
 
 function dayView() {
   const t = trip, i = t.days.findIndex(d => d.id === dayId), d = t.days[i];
-  return `${daysNav()}<main><section aria-labelledby="h-${esc(d.id)}" style="--line:${esc(d.c)};min-width:0">
-   <div class="dayhead"><div style="min-width:0">
-     <div class="lineName"><i></i>${esc(d.dow)} ${esc(d.label)} ${parts(d.date).y}, jour ${i + 1}${d.line ? ", " + esc(d.line) : ""}</div>
+  const noteTile = k => k === "warn" ? tile("alert-triangle", "butter") : tile(k === "info" ? "bulb" : "info-circle", k === "info" ? "lilac" : "mint");
+  return `${daysNav()}<main><section aria-labelledby="h-${esc(d.id)}" style="--dc:${esc(d.c)};min-width:0">
+   <div class="card dayhead">
+     <div class="dkick"><i></i>Jour ${i + 1}, ${esc(d.dow.toLowerCase())}. ${parts(d.date).d} ${MOIS[parts(d.date).m - 1]}</div>
      <h2 id="h-${esc(d.id)}">${esc(d.title)}</h2>
-     ${d.sub ? `<div class="daysub">${esc(d.sub)}</div>` : ""}</div>
-     <a class="btn" href="${dayRoute(t, d)}" target="_blank" rel="noopener">Carte de la journée ↗</a>
+     ${d.sub ? `<p class="daysub">${esc(d.sub)}</p>` : ""}
+     <div class="dacts"><a class="btn" href="${dayRoute(t, d)}" target="_blank" rel="noopener">${ic("map-2")}Carte de la journée</a></div>
    </div>
-   ${(d.notes || []).length ? `<div class="notes">${d.notes.map(n => `<div class="note ${esc(n[1])}">${esc(n[0])}</div>`).join("")}</div>` : ""}
-   <ol class="route">${d.stops.map((s, k) => stopHTML(d, s, k)).join("")}
-   ${d.back && d.back.length ? `<li class="stop home"><div class="time">Retour</div><div class="tick"></div><div class="card"><span class="ctime">Retour</span><h3>Rentrer à l'hôtel</h3>
-      <ol class="plain">${d.back.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
-      ${t.hotel ? `<a class="mini" href="${mapsDir(t, d.stops[d.stops.length - 1].q, t.hotel.q, false)}" target="_blank" rel="noopener">Itinéraire retour dans Google Maps ↗</a>` : ""}</div></li>` : ""}
+   ${(d.notes || []).length ? `<div class="notes">${d.notes.map(n => `<div class="note">${noteTile(n[1])}<p>${esc(n[0])}</p></div>`).join("")}</div>` : ""}
+   <ol class="stops">${d.stops.map((s, k) => stopHTML(d, s, k)).join("")}
+   ${d.back && d.back.length ? `<li><div class="leg">${ic("home-2")}Retour</div><article class="card scard homecard"><div class="shead">${tile("home-2", "lilac")}<div class="smain"><div class="stime">Fin de journée</div><h3>Rentrer à l'hôtel</h3></div></div>
+      <div class="sbody"><ol class="plain">${d.back.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
+      ${t.hotel ? `<a class="mini" href="${mapsDir(t, d.stops[d.stops.length - 1].q, t.hotel.q, false)}" target="_blank" rel="noopener">${ic("map-2")}Itinéraire retour dans Google Maps</a>` : ""}</div></article></li>` : ""}
    </ol>
    <div class="pager">
-    ${i > 0 ? `<a class="btn" href="${href(t.days[i - 1].id)}">‹ ${esc(t.days[i - 1].dow)} ${esc(t.days[i - 1].label)}</a>` : "<span></span>"}
-    ${i < t.days.length - 1 ? `<a class="btn" href="${href(t.days[i + 1].id)}">${esc(t.days[i + 1].dow)} ${esc(t.days[i + 1].label)} ›</a>` : ""}
+    ${i > 0 ? `<a class="btn ghost" href="${href(t.days[i - 1].id)}">${ic("chevron-left")}${esc(t.days[i - 1].dow)} ${parts(t.days[i - 1].date).d}</a>` : "<span></span>"}
+    ${i < t.days.length - 1 ? `<a class="btn solid" href="${href(t.days[i + 1].id)}">${esc(t.days[i + 1].dow)} ${parts(t.days[i + 1].date).d}${ic("chevron-right")}</a>` : ""}
    </div>
   </section>${sidebar()}</main>`;
 }
@@ -288,19 +323,19 @@ function sidebar() {
   const oui = (t.budget || []).filter(b => b[3] === "oui");
   const lo = oui.reduce((a, b) => a + b[4], 0), hi = oui.reduce((a, b) => a + b[5], 0);
   return `<aside>
-   ${resa.length ? `<div class="panel"><h3>À réserver</h3>
+   ${resa.length ? `<div class="card panel"><h3>${tile("check", "mint")}À réserver</h3>
     <div class="prog"><i style="width:${n / resa.length * 100}%"></i></div>
-    <div class="small cnt" style="margin-bottom:8px">${n} sur ${resa.length} fait${n > 1 ? "s" : ""}</div>
+    <div class="small cnt" style="margin-bottom:6px">${n} sur ${resa.length} fait${n > 1 ? "s" : ""}</div>
     <div class="chk">${resa.map(r => `<label><input type="checkbox" data-k="${esc(r[0])}" ${done[r[0]] ? "checked" : ""}><span>${esc(r[1])}<em>${esc(r[2])}</em></span></label>`).join("")}</div>
    </div>` : ""}
-   <div class="panel"><h3>Photos</h3><div class="big">${PHOTOS.length}</div>
+   <div class="card panel"><h3>${tile("camera", "peach")}Photos</h3><div class="big">${PHOTOS.length}</div>
     <div class="small">photo${PHOTOS.length > 1 ? "s" : ""} sur cet appareil</div>
-    <div style="margin-top:12px"><a class="btn" href="${href("photos")}">Voir toutes les photos</a></div></div>
-   <div class="panel"><h3>Mes billets</h3><div class="big">${TICKETS.length}</div>
+    <div style="margin-top:12px"><a class="btn" href="${href("photos")}">Voir les photos</a></div></div>
+   <div class="card panel"><h3>${tile("ticket", "pink")}Mes billets</h3><div class="big">${TICKETS.length}</div>
     <div class="small">billet${TICKETS.length > 1 ? "s" : ""} enregistré${TICKETS.length > 1 ? "s" : ""} sur cet appareil</div>
     <div style="margin-top:12px"><a class="btn" href="${href("billets")}">Ouvrir mes billets</a></div></div>
-   ${oui.length ? `<div class="panel"><h3>Budget activités</h3><div class="big">${money(lo)} – ${money(hi)}</div>
-    <div class="small">par personne, pour ce que tu as noté « Oui ». Hors repas et transports du quotidien.</div>
+   ${oui.length ? `<div class="card panel"><h3>${tile("coin", "butter")}Budget activités</h3><div class="big">${money(lo)} – ${money(hi)}</div>
+    <div class="small">par personne, pour ce que tu as noté « Oui ».</div>
     <div style="margin-top:12px"><a class="btn" href="${href("budget")}">Voir le détail</a></div></div>` : ""}
   </aside>`;
 }
@@ -311,25 +346,26 @@ function photosView() {
   const t = trip, byKey = {};
   PHOTOS.forEach(p => (byKey[p.key] = byKey[p.key] || []).push(p));
   const known = new Set();
+  const grid = k => `<div class="pgrid">${photosFor(k).map(p => `<button class="pth" data-ph="${p.id}" data-pk="${esc(k)}" aria-label="Voir la photo"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}</div>`;
   const days = t.days.map(d => {
     const stops = d.stops.map(s => { const k = tKey(d, s); known.add(k); return byKey[k] ? [s, k] : null; }).filter(Boolean);
-    return stops.length ? `<section class="pgday" style="--line:${esc(d.c)}"><h3><i></i><a href="${href(d.id)}">${esc(d.dow)} ${esc(d.label)}, ${esc(d.title)}</a></h3>
-      ${stops.map(([s, k]) => `<div class="pgstop"><h4>${esc(s.n)}</h4><div class="pgrid">${photosFor(k).map(p => `<button class="pth" data-ph="${p.id}" data-pk="${esc(k)}" aria-label="Voir la photo"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}</div></div>`).join("")}</section>` : "";
+    return stops.length ? `<section class="card pgday" style="--dc:${esc(d.c)}"><h3><i></i><a href="${href(d.id)}">${esc(d.dow)} ${parts(d.date).d} ${MOIS[parts(d.date).m - 1]}, ${esc(d.title)}</a></h3>
+      ${stops.map(([s, k]) => `<div class="pgstop"><h4>${esc(s.n)}</h4>${grid(k)}</div>`).join("")}</section>` : "";
   }).join("");
   const orphan = Object.keys(byKey).filter(k => !known.has(k));
   return `<main class="full"><section style="min-width:0">
-   <h2 class="pageh">Photos</h2>
-   <div class="daysub">${PHOTOS.length ? `${plural(PHOTOS.length, "photo")} rangée${PHOTOS.length > 1 ? "s" : ""} par jour et par endroit.` : ""} Pour en ajouter, ouvre un jour du programme et touche « Ajouter des photos » sur l'étape.</div>
+   <h2 class="pageh" style="margin-top:8px">Photos</h2>
+   <p class="daysub">${PHOTOS.length ? `${plural(PHOTOS.length, "photo")}, rangée${PHOTOS.length > 1 ? "s" : ""} par jour et par endroit. ` : ""}Pour en ajouter, ouvre un jour du programme et touche « Ajouter des photos » sur l'étape.</p>
    <div class="store small" id="storeInfo"></div>
-   ${!DB.ok ? `<div class="note warn" style="margin-top:14px">Ce navigateur bloque le stockage (navigation privée ?). Ouvre le site dans une fenêtre normale pour garder des photos.</div>` : ""}
-   ${PHOTOS.length ? days + (orphan.length ? `<section class="pgday"><h3><i></i>Autres photos</h3><p class="small">Étapes renommées ou retirées du programme.</p>${orphan.map(k => `<div class="pgstop"><h4>${esc(k.split("|").slice(2).join("|"))}</h4><div class="pgrid">${photosFor(k).map(p => `<button class="pth" data-ph="${p.id}" data-pk="${esc(k)}"><img alt="" data-thumb="${p.id}" loading="lazy"></button>`).join("")}</div></div>`).join("")}</section>` : "")
-     : `<div class="empty">${I.photo}<p><b>Pas encore de photo.</b><br>Chaque étape du programme a un bouton « Ajouter des photos » : prends une photo sur place ou choisis-en dans ta galerie.</p></div>
+   ${!DB.ok ? `<div class="note" style="margin-top:14px">${tile("alert-triangle", "butter")}<p>Ce navigateur bloque le stockage (navigation privée ?). Ouvre le site dans une fenêtre normale pour garder des photos.</p></div>` : ""}
+   ${PHOTOS.length ? days + (orphan.length ? `<section class="card pgday"><h3><i></i>Autres photos</h3><p class="small">Étapes renommées ou retirées du programme.</p>${orphan.map(k => `<div class="pgstop"><h4>${esc(k.split("|").slice(2).join("|"))}</h4>${grid(k)}</div>`).join("")}</section>` : "")
+     : `<div class="card empty">${tile("camera", "peach")}<p><b>Pas encore de photo.</b><br>Chaque étape du programme a un bouton « Ajouter des photos » : prends une photo sur place ou choisis-en dans ta galerie.</p></div>
         <div class="toolbar"><a class="btn solid" href="${href(dayId || t.days[0].id)}">Ouvrir le programme</a></div>`}
    ${backupPanel()}
   </section></main>`;
 }
 function backupPanel() {
-  return `<div class="panel" style="margin-top:26px"><h3>Sauvegarder ou changer d'appareil</h3>
+  return `<div class="card panel" style="margin-top:22px"><h3>${tile("download", "sky")}Sauvegarder ou changer d'appareil</h3>
    <p class="small" style="margin:0 0 12px">Les photos et billets ne sont pas envoyés sur GitHub (ton site est public). Pour les garder en sécurité ou les passer sur un autre appareil, télécharge une sauvegarde puis restaure-la sur l'autre appareil.</p>
    <div class="toolbar" style="margin-top:0"><button class="btn" data-export>Télécharger une sauvegarde</button>
    <label class="btn">Restaurer une sauvegarde<input type="file" class="vh" accept="application/json,.json" data-import></label></div></div>`;
@@ -447,12 +483,12 @@ function billetsView() {
   const order = ticketStops().map(x => x[0]).filter(k => groups[k]);
   Object.keys(groups).forEach(k => { if (!order.includes(k)) order.push(k); });
   return `<main><section style="min-width:0">
-   <h2 class="pageh">Mes billets</h2>
-   <div class="daysub">PDF, captures d'écran ou photos de billets. Ils restent sur cet appareil et s'ouvrent sans connexion.</div>
-   ${DB.ok ? "" : `<div class="note warn" style="margin-top:14px">Ce navigateur bloque le stockage (navigation privée ?). Ouvre le site dans une fenêtre normale pour enregistrer des billets.</div>`}
+   <h2 class="pageh" style="margin-top:8px">Mes billets</h2>
+   <p class="daysub">PDF, captures d'écran ou photos de billets. Ils restent sur cet appareil et s'ouvrent sans connexion.</p>
+   ${DB.ok ? "" : `<div class="note" style="margin-top:14px">${tile("alert-triangle", "butter")}<p>Ce navigateur bloque le stockage (navigation privée ?). Ouvre le site dans une fenêtre normale pour enregistrer des billets.</p></div>`}
    <div class="toolbar"><button class="btn solid" data-tk="${esc(trip.id)}|general" data-title="">${I.plus}Ajouter un billet</button></div>
    ${order.length ? order.map(k => `<div class="tgroup"><h3>${esc(ticketLabel(k))}</h3><div class="tlist">${groups[k].map(ticketCard).join("")}</div></div>`).join("")
-     : `<div class="empty">${I.ticket}<p><b>Aucun billet pour l'instant.</b><br>Touche « Ajouter un billet » ici, ou sur une étape réservée du programme.</p></div>`}
+     : `<div class="card empty">${tile("ticket", "pink")}<p><b>Aucun billet pour l'instant.</b><br>Touche « Ajouter un billet » ici, ou sur une étape réservée du programme.</p></div>`}
    ${backupPanel()}
   </section>${sidebar()}</main>`;
 }
@@ -513,7 +549,7 @@ async function exportAll() {
   const tickets = [], photos = [];
   for (const t of TICKETS) tickets.push({ ...t, files: await Promise.all(t.files.map(async f => ({ name: f.name, type: f.type, data: await toB64(f.blob) }))) });
   for (const p of PHOTOS) { const { blob, thumb, ...rest } = p; photos.push({ ...rest, data: await toB64(blob) }); }
-  const out = new Blob([JSON.stringify({ app: "carnets-voyage", v: 2, trip: trip.id, tickets, photos })], { type: "application/json" });
+  const out = new Blob([JSON.stringify({ app: "carnets-voyage", v: 2, trip: trip.id, tickets, photos, comptes: ls.get("cv-comptes-" + trip.id) })], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = `sauvegarde-${trip.id}-${isoToday()}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   toast(`Sauvegarde téléchargée (${Math.max(1, Math.round(out.size / 1048576))} Mo)`);
@@ -535,6 +571,7 @@ async function importAll(file) {
       let thumb = null; try { const [img, u] = await loadImg(blob); thumb = await toJpeg(img, 360, .72); URL.revokeObjectURL(u); } catch (e) {}
       await DB.put("photos", { ...p, trip: tripId, blob, thumb }); np++;
     }
+    if (j.comptes && j.comptes.people) { const k = "cv-comptes-" + tripId, cur = ls.get(k); if (!cur || !cur.exp || !cur.exp.length || confirm("Remplacer les comptes de cet appareil par ceux de la sauvegarde ?")) ls.set(k, j.comptes); }
     if (trip && trip.id === tripId) await loadTripData();
     if (!trip || trip.id !== tripId) location.hash = "#/" + tripId + "/photos"; else refresh();
     toast(`Restauré : ${plural(np, "photo")} et ${plural(nt, "billet")}`);
@@ -548,37 +585,183 @@ function budgetView() {
   const [ol, oh] = sum("oui"), [jl, jh] = sum("jsp");
   return `<main><section style="min-width:0">
    ${paidBlock()}
-   <h2 class="pageh"${(t.paid || []).length ? ' style="margin-top:34px"' : ""}>Activités, par personne</h2>
-   <div class="daysub">Repris de ton tableau, avec ta colonne « On rentre ? ».</div>
+   ${B.length ? `<h2 class="pageh" style="margin-top:${(t.paid || []).length ? 30 : 8}px">Activités, par personne</h2>
+   <p class="daysub">Repris de ton tableau, avec ta colonne « On rentre ? ».</p>
    <div class="sum">
     <div><span class="small">Activités retenues</span><span class="big">${money(ol)} – ${money(oh)}</span></div>
-    ${jh ? `<div><span class="small">Si tu ajoutes les « Je sais pas »</span><span class="big">+ ${money(jl)} – ${money(jh)}</span></div>` : ""}
+    ${jh ? `<div><span class="small">Avec les « Je sais pas »</span><span class="big">+ ${money(jl)} – ${money(jh)}</span></div>` : ""}
    </div>
-   <div class="tbl"><table><thead><tr><th>Activité</th><th>Prix / pers.</th><th>On rentre ?</th><th>Jour</th><th>Remarque</th></tr></thead><tbody>
-    ${B.map(b => `<tr><td>${esc(b[0])}</td><td class="num">${esc(b[1])}</td><td><span class="st ${esc(b[3])}">${lab[b[3]] || esc(b[3])}</span></td><td>${esc(b[6])}</td><td class="small">${esc(b[2])}</td></tr>`).join("")}
-   </tbody></table></div>
-   ${t.free ? `<div class="panel" style="margin-top:16px"><h3>Gratuit</h3><p class="small" style="margin:0">${esc(t.free)}</p></div>` : ""}
+   <div class="card rows">${B.map(b => `<div class="brow"><b>${esc(b[0])}</b><span class="bp">${esc(b[1])}</span><span class="bd">${esc(b[6] && b[6] !== "—" ? b[6] + ", " : "")}${esc(b[2])}</span><span class="bs"><span class="pill ${esc(b[3])}">${lab[b[3]] || esc(b[3])}</span></span></div>`).join("")}</div>` : ""}
+   ${t.free ? `<div class="card panel" style="margin-top:16px"><h3>${tile("sparkles", "mint")}Gratuit</h3><p class="small">${esc(t.free)}</p></div>` : ""}
   </section>${sidebar()}</main>`;
 }
 const euro = n => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 function paidBlock() {
   const P = trip.paid || []; if (!P.length) return "";
-  const tot = P.reduce((a, x) => a + x[2], 0);
-  return `<h2 class="pageh">Déjà réservé</h2>
-   <div class="daysub">Payé pour tout le groupe, en euros.</div>
-   <div class="sum"><div><span class="small">Total réglé</span><span class="big">${euro(tot)}</span></div></div>
-   <div class="tbl"><table class="paid"><thead><tr><th>Réservation</th><th>Détail</th><th>Montant</th></tr></thead><tbody>
-    ${P.map(x => `<tr><td>${esc(x[0])}</td><td class="small">${esc(x[1])}</td><td class="num">${euro(x[2])}</td></tr>`).join("")}
-   </tbody></table></div>`;
+  const tot = P.reduce((a, x) => a + x[2], 0), np = trip.people || 1;
+  return `<h2 class="pageh" style="margin-top:8px">Déjà réservé</h2>
+   <p class="daysub">Payé pour tout le groupe, en euros${np > 1 ? `, puis divisé par ${np} voyageurs` : ""}.</p>
+   <div class="sum"><div><span class="small">Total réglé</span><span class="big">${euro(tot)}</span></div>
+     ${np > 1 ? `<div><span class="small">Par personne</span><span class="big">${euro(tot / np)}</span></div>` : ""}</div>
+   <div class="card rows">${P.map(x => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span><span class="bd">${esc(x[1])}</span><span class="bs small">${np > 1 ? euro(x[2] / np) + " / pers." : ""}</span></div>`).join("")}</div>
+   <div class="toolbar"><a class="btn" href="${href("comptes")}">${ic("scale")}Qui a payé quoi ? Voir les comptes</a></div>`;
 }
+
+/* ---------- comptes partagés (façon Tricount) ----------
+   Enregistrés sur l'appareil : { people:[{id,name}], exp:[{id,title,amount,cur,paidBy,split:[ids],date,kind,paidRef}], rate } */
+const CK = () => "cv-comptes-" + trip.id;
+const getC = () => { const c = ls.get(CK()) || {}; return { people: c.people || [], exp: c.exp || [], rate: c.rate || trip.rate || 1.16 }; };
+const setC = c => ls.set(CK(), c);
+const toEur = (e, c) => e.cur === "£" ? e.amount * c.rate : e.amount;
+const nameOf = (c, id) => (c.people.find(p => p.id === id) || { name: "?" }).name;
+const fmtAmt = (n, cur) => cur === "£" ? "£" + n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : euro(n);
+function balances(c) {
+  const b = Object.fromEntries(c.people.map(p => [p.id, { paid: 0, share: 0 }]));
+  for (const e of c.exp) {
+    const v = toEur(e, c), who = (e.split || []).filter(id => b[id]);
+    if (b[e.paidBy]) b[e.paidBy].paid += v;
+    who.forEach(id => b[id].share += v / who.length);
+  }
+  return b;
+}
+function settle(c, b) { // qui rembourse qui, en un minimum de virements
+  const cred = [], debt = [];
+  c.people.forEach(p => { const s = Math.round((b[p.id].paid - b[p.id].share) * 100) / 100; if (s > 0.005) cred.push([p.id, s]); else if (s < -0.005) debt.push([p.id, -s]); });
+  cred.sort((x, y) => y[1] - x[1]); debt.sort((x, y) => y[1] - x[1]);
+  const out = []; let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const m = Math.min(debt[i][1], cred[j][1]);
+    if (m >= 0.01) out.push({ from: debt[i][0], to: cred[j][0], amount: Math.round(m * 100) / 100 });
+    debt[i][1] -= m; cred[j][1] -= m;
+    if (debt[i][1] < 0.005) i++; if (cred[j][1] < 0.005) j++;
+  }
+  return out;
+}
+function comptesView() {
+  const c = getC();
+  if (c.people.length < 1) return `<main class="full"><section style="min-width:0">
+    <h2 class="pageh" style="margin-top:8px">Comptes</h2>
+    <p class="daysub">Note qui a payé quoi pendant le voyage : le site partage chaque dépense en parts égales et calcule qui doit combien à qui.</p>
+    <form class="card panel" id="cSetup" style="margin-top:16px;max-width:520px"><h3>${tile("users", "lilac")}Qui voyage ?</h3>
+      ${Array.from({ length: Math.max(2, trip.people || 2) }, (_, i) => `<div class="field" style="margin-bottom:10px"><label for="pn${i}">Voyageur ${i + 1}</label><input id="pn${i}" data-pn placeholder="${i === 0 ? "Ton prénom" : "Prénom"}" autocomplete="off"></div>`).join("")}
+      <div class="err" id="cErr"></div>
+      <button class="btn solid" type="submit">Commencer les comptes</button></form>
+  </section></main>`;
+  const b = balances(c), tr = settle(c, b), total = c.exp.filter(e => e.kind !== "rembt").reduce((a, e) => a + toEur(e, c), 0);
+  const pendingPaid = (trip.paid || []).map((x, i) => [x, i]).filter(([, i]) => !c.exp.some(e => e.paidRef === i));
+  const exps = c.exp.slice().sort((x, y) => (y.date || "").localeCompare(x.date || "") || y.created - x.created);
+  return `<main class="full"><section style="min-width:0;max-width:760px">
+   <h2 class="pageh" style="margin-top:8px">Comptes</h2>
+   <p class="daysub">Chaque dépense est partagée en parts égales entre les personnes cochées. Les montants en livres sont convertis en euros.</p>
+   <div class="sum"><div><span class="small">Dépenses du groupe</span><span class="big">${euro(total)}</span></div>
+     <div><span class="small">Par personne</span><span class="big">${euro(c.people.length ? total / c.people.length : 0)}</span></div></div>
+   <div class="toolbar"><button class="btn solid" data-addexp>${I.plus}Ajouter une dépense</button></div>
+
+   ${pendingPaid.length ? `<div class="card panel" style="margin-top:16px"><h3>${tile("receipt", "butter")}Réservations à attribuer</h3>
+     <p class="small" style="margin:-4px 0 10px">Indique qui a payé chaque réservation pour l'ajouter aux comptes.</p>
+     ${pendingPaid.map(([x, i]) => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span>
+       <span class="bd"><select data-paidsel="${i}" aria-label="Qui a payé ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Payé par…</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></span><span></span></div>`).join("")}
+   </div>` : ""}
+
+   <div class="card panel" style="margin-top:16px"><h3>${tile("scale", "mint")}Soldes</h3>
+     ${c.people.map(p => { const s = b[p.id].paid - b[p.id].share, r = Math.round(s * 100) / 100;
+       return `<div class="brow"><b>${esc(p.name)}</b><span class="bp" style="color:${r > 0 ? "var(--mint-fg)" : r < 0 ? "var(--peach-fg)" : "inherit"}">${r > 0 ? "+" : ""}${euro(r)}</span>
+         <span class="bd">a payé ${euro(b[p.id].paid)}, sa part ${euro(b[p.id].share)}</span><span class="bs"><span class="pill ${r > 0 ? "free" : r < 0 ? "book" : "out"}">${r > 0 ? "doit recevoir" : r < 0 ? "doit rembourser" : "à l'équilibre"}</span></span></div>`; }).join("")}
+   </div>
+
+   <div class="card panel" style="margin-top:16px"><h3>${tile("arrows-exchange", "sky")}Pour être quittes</h3>
+     ${tr.length ? tr.map(t => `<div class="brow"><b>${esc(nameOf(c, t.from))} doit ${euro(t.amount)} à ${esc(nameOf(c, t.to))}</b><span></span>
+       <span class="bd"><button class="link" data-settle="${t.from}|${t.to}|${t.amount}">Marquer comme remboursé</button></span><span></span></div>`).join("")
+       : `<p class="small">Tout le monde est quitte.</p>`}
+   </div>
+
+   <h3 style="margin:22px 0 10px;font-size:18px">Dépenses</h3>
+   ${exps.length ? `<div class="card rows">${exps.map(e => `<div class="brow" style="cursor:pointer" data-editexp="${e.id}" role="button" tabindex="0">
+       <b>${e.kind === "rembt" ? "Remboursement : " : ""}${esc(e.title)}</b><span class="bp">${fmtAmt(e.amount, e.cur)}</span>
+       <span class="bd">Payé par ${esc(nameOf(c, e.paidBy))}${e.date ? ", le " + esc(dayLabel(e.date)) : ""}${(e.split || []).length < c.people.length ? `, pour ${e.split.map(id => esc(nameOf(c, id))).join(" et ")}` : ", pour tout le monde"}</span>
+       <span class="bs small">${e.cur === "£" ? "≈ " + euro(toEur(e, c)) : ""}</span></div>`).join("")}</div>`
+     : `<div class="card empty">${tile("receipt", "peach")}<p><b>Aucune dépense pour l'instant.</b><br>Ajoute un repas, un billet ou un taxi : le site calcule tout seul qui doit combien.</p></div>`}
+
+   <div class="card panel" style="margin-top:16px"><h3>${tile("users", "lilac")}Voyageurs et taux</h3>
+     <div class="chips" style="margin-bottom:12px">${c.people.map(p => `<span>${esc(p.name)}</span>`).join("")}</div>
+     <form id="cAdd" style="display:flex;gap:8px;flex-wrap:wrap"><input id="cNew" placeholder="Ajouter un voyageur" autocomplete="off" style="font:inherit;font-size:16px;padding:10px 12px;border:0;border-radius:14px;background:var(--bg);color:var(--fg);flex:1;min-width:160px"><button class="btn" type="submit">${ic("user-plus")}Ajouter</button></form>
+     <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:14px;font-weight:700">1 £ =
+       <input id="cRate" type="number" step="0.01" min="0.5" max="3" value="${c.rate}" style="font:inherit;font-size:16px;width:90px;padding:8px 10px;border:0;border-radius:12px;background:var(--bg);color:var(--fg)"> €</label>
+     <p class="small" style="margin-top:6px">Taux approximatif, à ajuster avant de faire les comptes. Les comptes sont enregistrés sur cet appareil et inclus dans la sauvegarde.</p>
+   </div>
+  </section></main>`;
+}
+const dayLabel = iso => { const d = trip.days.find(x => x.date === iso); if (d) return d.dow.toLowerCase() + ". " + parts(iso).d + " " + MOIS[parts(iso).m - 1]; const p = parts(iso); return p.d + " " + MOIS[p.m - 1]; };
+
+/* dialogue dépense */
+const edlg = $("#edlg"); let editingExp = null;
+function openExp(e) {
+  const c = getC(); editingExp = e || null;
+  $("#eTitleH").textContent = e ? (e.kind === "rembt" ? "Modifier le remboursement" : "Modifier la dépense") : "Ajouter une dépense";
+  $("#eTitle").value = e ? e.title : "";
+  $("#eAmount").value = e ? e.amount : "";
+  $("#eCur").value = e ? e.cur : "€";
+  $("#eDate").value = e ? e.date || "" : (trip.days.some(d => d.date === isoToday()) ? isoToday() : "");
+  $("#ePaid").innerHTML = c.people.map(p => `<option value="${p.id}"${e && e.paidBy === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  const sp = e ? e.split : c.people.map(p => p.id);
+  $("#eSplit").innerHTML = c.people.map(p => `<label><input type="checkbox" value="${p.id}" ${sp.includes(p.id) ? "checked" : ""}><span>${esc(p.name)}</span></label>`).join("");
+  $("#eDel").hidden = !e; $("#eDel").textContent = "Supprimer"; $("#eDel").dataset.confirm = "";
+  $("#eErr").textContent = ""; updateShare();
+  edlg.showModal ? edlg.showModal() : edlg.setAttribute("open", "");
+}
+function updateShare() {
+  const a = parseFloat(String($("#eAmount").value).replace(",", ".")), n = $$("#eSplit input:checked").length;
+  $("#eShare").textContent = a > 0 && n ? `Soit ${fmtAmt(a / n, $("#eCur").value)} par personne (${n} part${n > 1 ? "s" : ""} égale${n > 1 ? "s" : ""})` : "";
+}
+["input", "change"].forEach(ev => { $("#eAmount").addEventListener(ev, updateShare); $("#eCur").addEventListener(ev, updateShare); $("#eSplit").addEventListener(ev, updateShare); });
+$("#eCancel").onclick = () => edlg.close();
+$("#eAll").onclick = () => { $$("#eSplit input").forEach(i => i.checked = true); updateShare(); };
+$("#eForm").onsubmit = ev => {
+  ev.preventDefault();
+  const c = getC(), amount = Math.round(parseFloat(String($("#eAmount").value).replace(",", ".")) * 100) / 100;
+  const split = $$("#eSplit input:checked").map(i => i.value), title = $("#eTitle").value.trim();
+  if (!title) return $("#eErr").textContent = "Donne un nom à la dépense, par exemple « Dîner à Soho ».";
+  if (!(amount > 0)) return $("#eErr").textContent = "Indique un montant supérieur à 0.";
+  if (!split.length) return $("#eErr").textContent = "Coche au moins une personne pour partager la dépense.";
+  const e = { ...(editingExp || { id: uid("e"), created: Date.now(), kind: "dep" }), title, amount, cur: $("#eCur").value, paidBy: $("#ePaid").value, split, date: $("#eDate").value };
+  c.exp = c.exp.filter(x => x.id !== e.id).concat(e); setC(c);
+  edlg.close(); refresh(); toast(editingExp ? "Dépense modifiée" : "Dépense ajoutée");
+};
+$("#eDel").onclick = () => {
+  const b = $("#eDel"); if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirmer la suppression"; return; }
+  const c = getC(); c.exp = c.exp.filter(x => x.id !== editingExp.id); setC(c); edlg.close(); refresh(); toast("Dépense supprimée");
+};
+function bindComptes(v) {
+  const f = $("#cSetup", v);
+  if (f) f.onsubmit = ev => {
+    ev.preventDefault();
+    const names = $$("[data-pn]", f).map(i => i.value.trim()).filter(Boolean);
+    if (names.length < 2) return $("#cErr").textContent = "Entre au moins deux prénoms.";
+    const c = getC(); c.people = names.map(n => ({ id: uid("u"), name: n })); setC(c); refresh();
+  };
+  const a = $("#cAdd", v);
+  if (a) a.onsubmit = ev => { ev.preventDefault(); const n = $("#cNew").value.trim(); if (!n) return; const c = getC(); c.people.push({ id: uid("u"), name: n }); setC(c); refresh(); toast(n + " ajouté·e aux comptes"); };
+  const r = $("#cRate", v);
+  if (r) r.onchange = () => { const x = parseFloat(String(r.value).replace(",", ".")); if (x > 0) { const c = getC(); c.rate = x; setC(c); refresh(); } };
+  $$("[data-paidsel]", v).forEach(s => s.onchange = () => {
+    if (!s.value) return; const i = +s.dataset.paidsel, x = trip.paid[i], c = getC();
+    c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value, split: c.people.map(p => p.id), date: "", paidRef: i });
+    setC(c); refresh(); toast("Ajouté aux comptes");
+  });
+  $$("[data-editexp]", v).forEach(row => {
+    const go = () => openExp(getC().exp.find(e => e.id === row.dataset.editexp));
+    row.onclick = go; row.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } };
+  });
+}
+
 function infosView() {
-  const t = trip;
+  const t = trip, tones = ["sky", "lilac", "peach", "mint", "butter", "pink"], icons = ["coin", "bed", "plane", "device-tv", "bulb", "info-circle"];
   return `<main><section style="min-width:0">
-   <h2 class="pageh">Infos pratiques</h2>
+   <h2 class="pageh" style="margin-top:8px">Infos pratiques</h2>
    <div class="grid2">
-    ${(t.infos || []).map(x => `<div class="panel"><h3>${esc(x[0])}</h3><p class="small">${esc(x[1])}</p></div>`).join("")}
-    ${(t.bonus || []).length ? `<div class="panel"><h3>Idées en plus</h3><ul class="bonus">${t.bonus.map(b => `<li><a href="${mapsSearch(t, b[2])}" target="_blank" rel="noopener">${esc(b[0])}</a> <span class="small">${esc(b[1])}</span></li>`).join("")}</ul></div>` : ""}
-    <div class="panel"><h3>Hors connexion</h3><p class="small">Ce site s'enregistre sur l'appareil dès la première visite : programme, photos et billets s'ouvrent ensuite sans réseau, même dans le métro. Seuls les liens Google Maps demandent une connexion. Ajoute-le à l'écran d'accueil pour l'ouvrir comme une appli.</p></div>
+    ${(t.infos || []).map((x, i) => `<div class="card panel"><h3>${tile(icons[i % icons.length], tones[i % tones.length])}${esc(x[0])}</h3><p>${esc(x[1])}</p></div>`).join("")}
+    ${(t.bonus || []).length ? `<div class="card panel"><h3>${tile("star", "pink")}Idées en plus</h3><ul class="bonus">${t.bonus.map(b => `<li><a href="${mapsSearch(t, b[2])}" target="_blank" rel="noopener"><b>${esc(b[0])}</b></a> <span class="small">${esc(b[1])}</span></li>`).join("")}</ul></div>` : ""}
+    <div class="card panel"><h3>${tile("cloud", "sky")}Hors connexion</h3><p>Ce site s'enregistre sur l'appareil dès la première visite : programme, photos et billets s'ouvrent ensuite sans réseau, même dans le métro. Seuls les liens Google Maps demandent une connexion. Ajoute-le à l'écran d'accueil pour l'ouvrir comme une appli.</p></div>
    </div>
   </section>${sidebar()}</main>`;
 }
@@ -594,6 +777,7 @@ function bindView() {
   });
   const sel = $('.daybtn[aria-current="page"]'); if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
   if (section === "photos") showStorage();
+  if (section === "comptes") bindComptes(v);
 }
 document.addEventListener("change", e => {
   const a = e.target.closest("[data-addph]"); if (a) { addPhotos(a.dataset.addph, a.files, a); a.value = ""; return; }
@@ -603,6 +787,9 @@ document.addEventListener("click", async e => {
   const ph = e.target.closest("[data-ph]"); if (ph) return openLB(ph.dataset.pk, ph.dataset.ph);
   const tk = e.target.closest("[data-tk]"); if (tk) return openTicketDialog(tk.dataset.tk, tk.dataset.title);
   if (e.target.closest("[data-export]")) return exportAll();
+  if (e.target.closest("[data-addexp]")) return openExp();
+  const st = e.target.closest("[data-settle]");
+  if (st) { const [from, to, amt] = st.dataset.settle.split("|"), c = getC(); c.exp.push({ id: uid("e"), created: Date.now(), kind: "rembt", title: nameOf(c, from) + " → " + nameOf(c, to), amount: +amt, cur: "€", paidBy: from, split: [to], date: isoToday() }); setC(c); refresh(); return toast("Remboursement enregistré"); }
   const o = e.target.closest("[data-open]"); if (o) return openFile(o.dataset.open, +o.dataset.f);
   const ed = e.target.closest("[data-edit]"); if (ed) { const t = TICKETS.find(x => x.id === ed.dataset.edit); if (dlg.open) dlg.close(); return openTicketDialog(t.key, t.title, t); }
   const dl = e.target.closest("[data-del]");

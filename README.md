@@ -22,6 +22,14 @@ Ouvre l'adresse dans Safari (iPhone) ou Chrome (Android), puis **Partager → Su
 - Sur chaque étape payante ou réservée : bouton **« Ajouter un billet »**, ou onglet **Billets**.
 - PDF, photos ou captures d'écran, avec le numéro de réservation.
 
+## Comptes (comme Tricount)
+
+Onglet **Comptes** : entre les prénoms des voyageurs, puis ajoute chaque dépense (quoi, combien, en € ou en £, qui a payé, pour qui). Chaque dépense est partagée en parts égales entre les personnes cochées, et le site calcule les soldes et qui doit combien à qui. « Marquer comme remboursé » enregistre le remboursement.
+
+Les réservations déjà payées (vols, hôtel, transferts) sont proposées en haut : choisis qui les a payées pour les ajouter. Le taux livre → euro est modifiable.
+
+Les comptes sont enregistrés sur l'appareil où tu les saisis (comme les photos) et inclus dans la sauvegarde : tiens-les sur un seul téléphone, ou passe la sauvegarde à l'autre.
+
 ## Où sont stockés photos et billets ?
 
 **Uniquement dans le navigateur de l'appareil où tu les ajoutes.** Ils ne sont jamais mis sur GitHub, parce qu'un site GitHub Pages est public et que tes QR codes et photos perso ne doivent pas l'être.
@@ -59,9 +67,8 @@ Ne renomme pas une étape où tu as déjà mis des photos ou des billets : ils y
 
 ## Londres : à vérifier avant de réserver
 
-- **Transfert retour** : prise en charge à **North Acton Station** à 5h00, pas devant l'hôtel (167 Horn Lane). Vérifier le trajet à pied avec les valises, ou demander au service de transfert de venir à l'hôtel.
-- **Vol retour 7h35** : arrivée à Gatwick vers 6h00, faire l'enregistrement British Airways en ligne la veille.
-
+- **Transfert retour** : le chauffeur arrive à 5h00 devant l'hôtel et n'attend que 15 min.
+- **Vol retour 7h35** : arrivée à Gatwick vers 6h08, faire l'enregistrement British Airways en ligne la veille.
 - **Mundo Pixar** (Wembley) ferme définitivement le 3 janvier 2027 : retiré du programme et remplacé par la Wallace Collection (gratuite) le jeudi 27.
 - **Jellycat chez Selfridges** et **Babylon Park** (entrée gratuite, jeux payants) : vérifier qu'ils sont toujours là.
 - **Sky Garden** et **Horizon 22** : billets gratuits mis en ligne le lundi, environ 3 semaines avant. Le dimanche, Horizon 22 ferme à 16h et la terrasse du Sky Garden à 18h.

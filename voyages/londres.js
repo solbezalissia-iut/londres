@@ -11,6 +11,8 @@
      tags  [["texte","free|price|book|out|warn"]]
      major étape principale   adj  ajustement expliqué   warn  alerte
      tk    1 = on peut y ranger des billets
+     from  (facultatif) d'où l'on part, si ce n'est pas l'étape précédente
+     ic    (facultatif) nom d'icône Tabler, sinon devinée d'après le nom
    Ne change pas le nom (n) d'une étape où tu as déjà mis des photos
    ou des billets : ils y sont rattachés par ce nom.
    ============================================================ */
@@ -24,11 +26,13 @@
   end: "2027-05-30",
   city: "London",
   currency: "£",
+  people: 2,                      // nombre de voyageurs (prix par personne)
+  rate: 1.16,                     // 1 £ = 1,16 € environ, modifiable dans l'onglet Comptes
   summary: "Dix jours entre musées gratuits, marchés, rooftops et Harry Potter.",
-  hotel: { name: "London Guest House by OYO", station: "Acton Main Line", q: "167 Horn Lane, Acton" },
+  hotel: { name: "London Guest House by OYO", station: "Acton Main Line", q: "167 Horn Lane, London W3 6PP" },
   facts: [
-    ["Hôtel", "London Guest House by OYO, 167 Horn Lane, Acton"],
-    ["Arrivée", "ven. 21 mai, easyJet, Gatwick 16h10"],
+    ["Hôtel", "London Guest House by OYO, 167 Horn Lane, W3 6PP"],
+    ["Arrivée", "ven. 21 mai, easyJet U28390, Gatwick 16h10"],
     ["Départ", "dim. 30 mai, British Airways, Gatwick 7h35"]
   ],
 
@@ -36,20 +40,20 @@
 paid: [
   ["Vols Montpellier ⇄ Gatwick", "easyJet à l'aller, British Airways au retour, 2 passagers", 501.43],
   ["London Guest House by OYO, Acton", "9 nuits, annulation gratuite", 694],
-  ["Transfert Gatwick → hôtel", "ven. 21 mai, 16h10, véhicule électrique", 105.52],
-  ["Transfert North Acton → Gatwick", "dim. 30 mai, 5h00, véhicule électrique", 102.97]
+  ["Transfert Gatwick → hôtel (Transferz)", "ven. 21 mai, suivi du vol, annulation gratuite jusqu'à 24 h avant", 105.52],
+  ["Transfert hôtel → Gatwick (Transferz)", "dim. 30 mai, 5h00, réduction Genius de 10 % comprise", 102.97]
 ],
 
 days: [
 { id:"j1", date:"2027-05-21", dow:"Ven", label:"21 mai", title:"Arrivée", line:"Elizabeth line", c:"#6950a1",
   sub:"Atterrissage à Gatwick, transfert privé jusqu'à l'hôtel, puis petite balade au calme.",
-  notes:[["Transfert réservé et confirmé : le chauffeur t'attend à l'arrivée. Garde ton téléphone allumé en atterrissant, il peut t'écrire ou t'appeler.","info"],["Pour le métro les jours suivants : paie tous tes trajets avec la même carte bancaire sans contact (ou ton téléphone). Pas besoin d'acheter d'Oyster.","info"]],
+  notes:[["Transfert Transferz confirmé, avec suivi du vol U28390 : le chauffeur arrive une fois l'avion posé et t'attend 45 min. Garde ton téléphone allumé en atterrissant. Range ta confirmation dans « Ajouter un billet » sur l'étape du transfert.","info"],["Pour le métro les jours suivants : paie tous tes trajets avec la même carte bancaire sans contact (ou ton téléphone). Pas besoin d'acheter d'Oyster.","info"]],
   stops:[
-   {t:"16h10",n:"Aéroport de Gatwick (LGW)",addr:"Gatwick Airport, Horley RH6 0NP",q:"Gatwick Airport",major:1,tk:1,
-    d:"Atterrissage du vol easyJet depuis Montpellier (départ 15h10), puis récupération des bagages.",
-    how:["Vol direct easyJet Montpellier → Gatwick, 15h10 → 16h10 (heure de Londres)."]},
+   {t:"16h10",n:"Aéroport de Gatwick (LGW)",addr:"Gatwick Airport, Horley RH6 0NP",q:"Gatwick Airport",major:1,tk:1,from:"Montpellier",
+    d:"Atterrissage du vol easyJet U28390 depuis Montpellier (départ 15h10), puis récupération des bagages.",
+    how:["Vol direct easyJet U28390 Montpellier → Gatwick, 15h10 → 16h10 (heure de Londres)."]},
    {t:"16h45",n:"Transfert privé → hôtel",addr:"Hall des arrivées, Gatwick",q:"Gatwick Airport",tk:1,
-    d:"Véhicule électrique standard, réservé et confirmé. Environ 1h à 1h15 de route un vendredi en fin d'après-midi.",tags:[["Payé 105,52 €","out"]],
+    d:"Véhicule électrique standard, 2 personnes. Le chauffeur suit ton vol et t'attend 45 min après l'atterrissage. Environ 1h10 de route.",tags:[["Payé 105,52 €","out"],["Attente 45 min","free"]],
     how:["Après la douane, sors dans le hall des arrivées de ton terminal (North ou South, indiqué sur ta carte d'embarquement).","Repère le chauffeur avec ton nom, ou suis les instructions du message de confirmation (point de rendez-vous, numéro à appeler).","Si tu attends tes bagages longtemps, préviens le chauffeur."]},
    {t:"18h00",n:"Check-in à l'hôtel",addr:"London Guest House by OYO, 167 Horn Lane, Acton W3",q:"167 Horn Lane, Acton",major:1,tk:1,
     d:"Dépose les bagages, souffle un peu.",how:["Le chauffeur te dépose devant l'hôtel."]},
@@ -287,7 +291,7 @@ days: [
 
 { id:"j9", date:"2027-05-29", dow:"Sam", label:"29 mai", title:"Harry Potter Studio Tour", line:"Bakerloo line", c:"#b36305",
   sub:"Journée complète aux studios Warner Bros. à Leavesden. Le soir, préparation des bagages.",
-  notes:[["Réservation obligatoire des semaines à l'avance, aucun billet vendu sur place. C'est le samedi d'un week-end férié au Royaume-Uni : réserve dès l'ouverture des ventes.","warn"],["Le transfert pour Gatwick part demain à 5h00 de North Acton Station : couche-toi tôt et prépare les valises ce soir.","info"]],
+  notes:[["Réservation obligatoire des semaines à l'avance, aucun billet vendu sur place. C'est le samedi d'un week-end férié au Royaume-Uni : réserve dès l'ouverture des ventes.","warn"],["Le transfert pour Gatwick passe te prendre demain à 5h00 devant l'hôtel : couche-toi tôt, prépare les valises et fais l'enregistrement en ligne ce soir.","info"]],
   stops:[
    {t:"07h15",n:"Hôtel → Euston",addr:"Euston Station, NW1 2RT",q:"Euston Station",
     d:"Environ 35 min.",
@@ -304,21 +308,19 @@ days: [
    {t:"15h00",n:"Retour vers Londres",addr:"Watford Junction → Euston",q:"Euston Station",
     d:"Navette puis train direct vers Euston.",how:["Navette jusqu'à Watford Junction.","Train direct vers Euston, ~20 min."]},
    {t:"17h00",n:"Soirée : bagages & dernières boutiques",addr:"Westfield London",q:"Westfield London",
-    d:"Westfield London est près de l'hôtel. Prépare tout ce soir : départ de l'hôtel vers 4h35.",how:["Euston → hôtel par la Northern line et l'Elizabeth line, ~35 min."]}
+    d:"Westfield London est près de l'hôtel. Prépare tout ce soir : le chauffeur arrive à 5h00.",how:["Euston → hôtel par la Northern line et l'Elizabeth line, ~35 min."]}
   ],
-  back:["Couche-toi tôt, le réveil sonne vers 4h00."]
+  back:["Couche-toi tôt, le réveil sonne vers 4h15."]
 },
 
 { id:"j10", date:"2027-05-30", dow:"Dim", label:"30 mai", title:"Départ", line:"Retour", c:"#d4231e",
   sub:"Transfert à 5h00, vol British Airways à 7h35, atterrissage à Montpellier à 10h40.",
-  notes:[["Le chauffeur t'attend à North Acton Station, pas devant l'hôtel. Vérifie la veille le trajet à pied avec les valises, ou demande au service de transfert s'il peut venir au 167 Horn Lane.","warn"],["Avec une prise en charge à 5h00, tu arrives vers 6h00 pour un vol à 7h35 : c'est jouable mais serré si tu as des bagages en soute. Fais l'enregistrement en ligne la veille.","warn"]],
+  notes:[["Le chauffeur arrive à 5h00 devant l'hôtel et n'attend que 15 min : sois en bas à l'heure, téléphone allumé.","warn"],["Arrivée prévue à Gatwick vers 6h08 pour un vol à 7h35 : jouable mais serré avec des bagages en soute. Fais l'enregistrement British Airways en ligne la veille.","warn"]],
   stops:[
-   {t:"04h35",n:"Départ de l'hôtel à pied",addr:"167 Horn Lane, Acton",q:"167 Horn Lane, Acton",mode:"walk",
-    d:"Rejoins le point de prise en charge avec les valises.",how:["Rends la clé à l'accueil (ou dépose-la selon les consignes de l'hôtel)."]},
-   {t:"05h00",n:"Transfert privé → Gatwick",addr:"North Acton Station, Victoria Road, W3",q:"North Acton Station",major:1,tk:1,mode:"walk",
-    d:"Véhicule électrique standard, réservé et confirmé. Environ 45 min à 1h de route à cette heure-là.",tags:[["Payé 102,97 €","out"]],
-    how:["Remonte Horn Lane vers le nord jusqu'à la station North Acton (suis le lien Maps ci-dessous pour le trajet exact).","Attends le chauffeur à l'entrée de la station, téléphone allumé."]},
-   {t:"06h00",n:"Arrivée à Gatwick",addr:"Gatwick Airport, RH6 0NP",q:"Gatwick Airport",tk:1,
+   {t:"05h00",n:"Transfert privé → Gatwick",addr:"Devant l'hôtel, 167 Horn Lane, London W3 6PP",q:"167 Horn Lane, London W3 6PP",major:1,tk:1,
+    d:"Véhicule électrique standard, 2 personnes. Environ 1h10 de route. Attente maximale du chauffeur : 15 min.",tags:[["Payé 102,97 €","out"],["Attente 15 min","warn"]],
+    how:["Rends la clé à l'accueil (ou selon les consignes de l'hôtel).","Attends le chauffeur devant l'hôtel dès 4h55."]},
+   {t:"06h08",n:"Arrivée à Gatwick",addr:"Gatwick Airport, RH6 0NP",q:"Gatwick Airport",tk:1,
     d:"Dépôt des bagages puis sécurité. Vérifie ton terminal (North ou South) sur ta carte d'embarquement British Airways.",how:["Le chauffeur te dépose devant le terminal."]},
    {t:"07h35",n:"Décollage pour Montpellier",addr:"Vol direct British Airways, arrivée 10h40",q:"Gatwick Airport",major:1,tk:1,mode:"walk",d:"",how:[]}
   ],
@@ -370,7 +372,7 @@ bonus: [
 infos: [
  ["Payer les transports","Métro, bus, Elizabeth line, Overground, DLR, téléphérique et bateaux Uber Boat : passe ta carte bancaire sans contact (ou ton téléphone) sur le lecteur jaune, à l'entrée et à la sortie. Utilise toujours la même carte : le plafond par jour et par semaine s'applique tout seul. L'hôtel est en zone 3."],
  ["Hôtel","London Guest House by OYO, 167 Horn Lane, Acton. Horn Lane descend jusqu'à la gare d'Acton Main Line (Elizabeth line) : direct pour Paddington (7 min), Bond Street (12 min), Tottenham Court Road (14 min), Liverpool Street (20 min), Whitechapel et Canary Wharf."],
- ["Vols et transferts","Aller : easyJet Montpellier 15h10 → Gatwick 16h10, puis transfert privé jusqu'à l'hôtel. Retour : transfert privé depuis North Acton Station à 5h00, puis British Airways Gatwick 7h35 → Montpellier 10h40. Les deux transferts sont confirmés."],
+ ["Vols et transferts","Aller : easyJet Montpellier 15h10 → Gatwick 16h10, puis transfert privé jusqu'à l'hôtel. Retour : transfert privé depuis l'hôtel à 5h00 (arrivée vers 6h08), puis British Airways Gatwick 7h35 → Montpellier 10h40. Les deux transferts sont confirmés."],
  ["Applis utiles","Citymapper ou Google Maps pour les trajets en direct, TfL Go pour les perturbations, Uber pour le taxi du dernier jour et les bateaux Thames Clippers."],
  ["À savoir","Prise électrique britannique (type G) : prends un adaptateur. Passeport obligatoire, et autorisation de voyage électronique (ETA) à demander en ligne avant le départ. Le lundi 31 mai 2027 est férié au Royaume-Uni : le samedi 29 sera très chargé partout."]
 ],

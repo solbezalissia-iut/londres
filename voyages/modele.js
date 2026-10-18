@@ -16,6 +16,7 @@
   end: "2028-04-14",
   city: "Roma",                        // ajouté aux recherches Google Maps
   currency: "€",
+  people: 2,                           // nombre de voyageurs
   summary: "Cinq jours entre ruines antiques et gelato.",
   hotel: { name: "Hôtel", station: "Termini", q: "Roma Termini" },
   facts: [                             // (facultatif) petites infos sous le titre

@@ -1,27 +1,19 @@
 /* Garde le site disponible hors connexion (métro, avion, pas de forfait à l'étranger).
-   - À l'installation : met en cache tout le site, chaque voyage et les polices.
+   - À l'installation : met en cache tout le site, chaque voyage, les polices et les icônes.
    - Ensuite : essaie le réseau (pour avoir les mises à jour), mais si la connexion
      ne répond pas en 3 secondes ou est absente, sert la copie enregistrée. */
 importScripts("voyages.js");
-const VERSION = "2026-10-18b";
+const VERSION = "2026-10-18d";
 const CACHE = "carnets-" + VERSION;
-const FONTS = "carnets-polices";
-const FONT_CSS = "https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap";
-const FILES = ["./", "index.html", "app.js", "voyages.js", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png",
+const FILES = ["./", "index.html", "app.js", "icons.js", "voyages.js",
+  "fonts/nunito-latin-500-normal.woff2", "fonts/nunito-latin-700-normal.woff2", "fonts/nunito-latin-800-normal.woff2",
+  "fonts/nunito-latin-ext-500-normal.woff2", "fonts/nunito-latin-ext-700-normal.woff2", "fonts/nunito-latin-ext-800-normal.woff2", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png",
   ...(self.VOYAGES || []).map(v => "voyages/" + v + ".js")];
 
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
     await c.addAll(FILES.map(f => new Request(f, { cache: "reload" })));
-    try { // polices : la feuille de style puis chaque fichier de police qu'elle cite
-      const fc = await caches.open(FONTS), r = await fetch(FONT_CSS);
-      if (r.ok) {
-        const css = await r.clone().text(); await fc.put(FONT_CSS, r);
-        const urls = [...css.matchAll(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/g)].map(m => m[1]);
-        await Promise.all(urls.map(u => fetch(u, { mode: "cors" }).then(x => x.ok && fc.put(u, x)).catch(() => {})));
-      }
-    } catch (err) {}
     await self.skipWaiting();
   })());
 });
@@ -29,7 +21,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE && k !== FONTS).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -41,11 +33,6 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // polices Google : cache d'abord (elles ne changent pas)
-  if (/fonts\.(googleapis|gstatic)\.com$/.test(url.host)) {
-    e.respondWith(caches.open(FONTS).then(async c => (await c.match(req)) || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; })));
-    return;
-  }
   if (url.origin !== location.origin) return;
 
   // pages et fichiers du site : réseau d'abord avec délai, sinon cache
