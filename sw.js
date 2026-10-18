@@ -3,7 +3,7 @@
    - Ensuite : essaie le réseau (pour avoir les mises à jour), mais si la connexion
      ne répond pas en 3 secondes ou est absente, sert la copie enregistrée. */
 importScripts("voyages.js");
-const VERSION = "2026-10-18";
+const VERSION = "2026-10-18b";
 const CACHE = "carnets-" + VERSION;
 const FONTS = "carnets-polices";
 const FONT_CSS = "https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap";

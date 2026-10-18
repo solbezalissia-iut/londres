@@ -61,11 +61,6 @@ button{font:inherit;color:inherit}
 .btn.danger{border-color:var(--roundel);color:var(--roundel)}
 .btn svg{width:18px;height:18px;flex:none}
 
-/* ---------- roundel ---------- */
-.roundel{width:var(--rs,74px);height:var(--rs,74px);flex:none;position:relative}
-.roundel::before{content:"";position:absolute;inset:8%;border:calc(var(--rs,74px)*.15) solid var(--a);border-radius:50%}
-.roundel span{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);background:var(--c);color:#fff;font:600 calc(var(--rs,74px)*.15)/1 var(--f-display);letter-spacing:.12em;text-align:center;padding:.4em 0;text-transform:uppercase;overflow:hidden;white-space:nowrap}
-
 /* ---------- accueil ---------- */
 .homehead{padding:36px 0 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .homehead h1{font-size:clamp(2.4rem,7vw,4rem);font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--navy)}
@@ -75,7 +70,9 @@ button{font:inherit;color:inherit}
 .trip:hover h2{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
 .cover{position:relative;background:var(--c);min-height:200px;display:grid;place-items:center;overflow:hidden}
 .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cover .roundel{--rs:132px}
+.cover.noimg .lines{top:0;height:auto}
+.cover.noimg .lines i{border-right:3px solid var(--surface)}
+.cover.noimg .lines i:last-child{border-right:0}
 .lines{position:absolute;left:0;right:0;bottom:0;display:flex;height:14px}
 .lines i{flex:1}
 .tinfo{padding:24px 26px 26px;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -94,7 +91,6 @@ button{font:inherit;color:inherit}
 @media (max-width:720px){
   .trip{grid-template-columns:minmax(0,1fr)}
   .cover{min-height:190px}
-  .cover .roundel{--rs:104px}
   .tinfo{padding:18px 18px 20px}
 }
 
@@ -102,7 +98,7 @@ button{font:inherit;color:inherit}
 .tripbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:14px}
 .back{display:inline-flex;align-items:center;gap:4px;min-height:44px;font:600 15px var(--f-display);text-decoration:none;color:var(--navy);padding-right:10px}
 .back svg{width:20px;height:20px}
-header.top{padding:10px 0 18px;display:flex;gap:22px;align-items:center}
+header.top{padding:10px 0 18px;display:flex;gap:22px;align-items:center;border-left:6px solid var(--a);padding-left:16px;margin-top:6px}
 .ttl{min-width:0;flex:1}
 header.top h1{font-size:clamp(2rem,5vw,3.1rem);font-weight:600;letter-spacing:-.01em;line-height:1.05;color:var(--c)}
 :root[data-theme="dark"] header.top h1{color:var(--fg)}
@@ -246,6 +242,8 @@ tr:last-child td{border-bottom:0}
   td:nth-child(3){grid-column:2;grid-row:2;text-align:right}
   td:nth-child(4){grid-column:1;grid-row:2;color:var(--muted);font-size:13.5px}
   td:nth-child(5){grid-column:1/-1}
+  table.paid td:nth-child(2){grid-column:1/-1;grid-row:2;text-align:left}
+  table.paid td:nth-child(3){grid-column:2;grid-row:1;text-align:right}
 }
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
@@ -312,7 +310,6 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
   body{font-size:15px}
   .wrap{padding-bottom:calc(96px + var(--safe-b))}
   header.top{padding:0 0 12px}
-  header.top .roundel{display:none}
   header.top h1{font-size:2.1rem}
   .dates{font-size:16px;margin-top:2px}
   .facts{font-size:13px;gap:0 14px;margin-top:6px}

@@ -178,7 +178,7 @@ async function renderHome() {
    <div class="trips">${order.map(t => {
      const st = tripState(t), s = stats[t.id];
      return `<a class="trip ${st.k}" href="#/${esc(t.id)}" style="--c:${esc(t.color)};--a:${esc(t.accent)}">
-       <div class="cover">${s.cover ? `<img alt="" data-cover="${s.cover.id}">` : `<div class="roundel" aria-hidden="true"><span>${esc(t.badge || t.title)}</span></div>`}
+       <div class="cover${s.cover ? "" : " noimg"}">${s.cover ? `<img alt="" data-cover="${s.cover.id}">` : ""}
          <div class="lines" aria-hidden="true">${t.days.map(d => `<i style="background:${esc(d.c)}"></i>`).join("")}</div></div>
        <div class="tinfo">
          <div class="tstatus">${esc(st.txt)}</div>
@@ -208,14 +208,13 @@ function renderTrip() {
   $("#app").innerHTML = `
    <div class="tripbar"><a class="back" href="#/">${I.back}Mes voyages</a>${netPill()}</div>
    <header class="top">
-     <div class="roundel" aria-hidden="true"><span>${esc(t.badge || t.title)}</span></div>
      <div class="ttl">
        <h1>${esc(t.title)}</h1>
        <div class="dates">${esc(range(t.start, t.end))}</div>
        <div class="facts"><span class="status">${esc(st.txt)}</span>${(t.facts || []).map(f => `<span>${esc(f[0])} : <b>${esc(f[1])}</b></span>`).join("")}</div>
      </div>
    </header>
-   <nav class="secnav" aria-label="Sections du voyage">${SECTIONS.filter(s => s[0] !== "budget" || (t.budget && t.budget.length)).map(([id, lab, ic]) =>
+   <nav class="secnav" aria-label="Sections du voyage">${SECTIONS.filter(s => s[0] !== "budget" || (t.budget && t.budget.length) || (t.paid && t.paid.length)).map(([id, lab, ic]) =>
      `<a href="${href(id === "programme" ? dayId || t.days[0].id : id)}" ${section === id ? 'aria-current="page"' : ""}>${ic}<span>${lab}</span>${counts[id] ? `<span class="n">${counts[id]}</span>` : ""}</a>`).join("")}</nav>
    ${view}
    ${t.footer ? `<footer>${esc(t.footer)} Les photos, billets et cases cochées restent sur l'appareil qui les a enregistrés.</footer>` : ""}`;
@@ -548,7 +547,8 @@ function budgetView() {
   const sum = k => { const r = B.filter(b => b[3] === k); return [r.reduce((a, b) => a + b[4], 0), r.reduce((a, b) => a + b[5], 0)]; };
   const [ol, oh] = sum("oui"), [jl, jh] = sum("jsp");
   return `<main><section style="min-width:0">
-   <h2 class="pageh">Budget par personne</h2>
+   ${paidBlock()}
+   <h2 class="pageh"${(t.paid || []).length ? ' style="margin-top:34px"' : ""}>Activités, par personne</h2>
    <div class="daysub">Repris de ton tableau, avec ta colonne « On rentre ? ».</div>
    <div class="sum">
     <div><span class="small">Activités retenues</span><span class="big">${money(ol)} – ${money(oh)}</span></div>
@@ -559,6 +559,17 @@ function budgetView() {
    </tbody></table></div>
    ${t.free ? `<div class="panel" style="margin-top:16px"><h3>Gratuit</h3><p class="small" style="margin:0">${esc(t.free)}</p></div>` : ""}
   </section>${sidebar()}</main>`;
+}
+const euro = n => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+function paidBlock() {
+  const P = trip.paid || []; if (!P.length) return "";
+  const tot = P.reduce((a, x) => a + x[2], 0);
+  return `<h2 class="pageh">Déjà réservé</h2>
+   <div class="daysub">Payé pour tout le groupe, en euros.</div>
+   <div class="sum"><div><span class="small">Total réglé</span><span class="big">${euro(tot)}</span></div></div>
+   <div class="tbl"><table class="paid"><thead><tr><th>Réservation</th><th>Détail</th><th>Montant</th></tr></thead><tbody>
+    ${P.map(x => `<tr><td>${esc(x[0])}</td><td class="small">${esc(x[1])}</td><td class="num">${euro(x[2])}</td></tr>`).join("")}
+   </tbody></table></div>`;
 }
 function infosView() {
   const t = trip;

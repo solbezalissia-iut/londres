@@ -10,7 +10,6 @@
   id: "modele",
   title: "Rome",                       // nom affiché
   country: "Italie",
-  badge: "Rome",                       // texte du macaron
   color: "#7a1f2b",                    // couleur principale du voyage
   accent: "#e0a526",                   // couleur secondaire
   start: "2028-04-10",                 // AAAA-MM-JJ
@@ -37,6 +36,7 @@
       back:["Retour à pied, 15 min."] }
   ],
 
+  paid: [],     // (facultatif) déjà payé : [quoi, détail, montant en euros]
   budget: [],   // (facultatif) [activité, prix, remarque, "oui|non|jsp", min, max, jour]
   resa: [],     // (facultatif) [identifiant, nom, détail]
   bonus: [],    // (facultatif) [nom, description, recherche Maps]

@@ -59,6 +59,9 @@ Ne renomme pas une étape où tu as déjà mis des photos ou des billets : ils y
 
 ## Londres : à vérifier avant de réserver
 
+- **Transfert retour** : prise en charge à **North Acton Station** à 5h00, pas devant l'hôtel (167 Horn Lane). Vérifier le trajet à pied avec les valises, ou demander au service de transfert de venir à l'hôtel.
+- **Vol retour 7h35** : arrivée à Gatwick vers 6h00, faire l'enregistrement British Airways en ligne la veille.
+
 - **Mundo Pixar** (Wembley) ferme définitivement le 3 janvier 2027 : retiré du programme et remplacé par la Wallace Collection (gratuite) le jeudi 27.
 - **Jellycat chez Selfridges** et **Babylon Park** (entrée gratuite, jeux payants) : vérifier qu'ils sont toujours là.
 - **Sky Garden** et **Horizon 22** : billets gratuits mis en ligne le lundi, environ 3 semaines avant. Le dimanche, Horizon 22 ferme à 16h et la terrasse du Sky Garden à 18h.
