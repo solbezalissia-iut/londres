@@ -3,7 +3,7 @@
    - Ensuite : essaie le réseau (pour avoir les mises à jour), mais si la connexion
      ne répond pas en 3 secondes ou est absente, sert la copie enregistrée. */
 importScripts("voyages.js");
-const VERSION = "2026-10-18f";
+const VERSION = "2026-10-18g";
 const CACHE = "carnets-" + VERSION;
 const FILES = ["./", "index.html", "app.js", "icons.js", "voyages.js", "outils/carnet-build.js", "lib/jszip.min.js",
   "fonts/nunito-latin-500-normal.woff2", "fonts/nunito-latin-700-normal.woff2", "fonts/nunito-latin-800-normal.woff2",
@@ -41,7 +41,9 @@ self.addEventListener("fetch", e => {
   // pages et fichiers du site : réseau d'abord avec délai, sinon cache
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
-    const net = fetch(req).then(r => { if (r.ok) c.put(req.mode === "navigate" ? "index.html" : req, r.clone()); return r; });
+    // « no-cache » : toujours vérifier auprès de GitHub, pour ne jamais mélanger deux versions du site
+    const fresh = req.mode === "navigate" ? fetch(req.url, { cache: "no-cache", credentials: "same-origin" }) : fetch(req, { cache: "no-cache" });
+    const net = fresh.then(r => { if (r.ok) c.put(req.mode === "navigate" ? "index.html" : req, r.clone()); return r; });
     try { return await timeout(net, 3000); }
     catch (err) {
       const hit = await c.match(req.mode === "navigate" ? "index.html" : req, { ignoreSearch: true });

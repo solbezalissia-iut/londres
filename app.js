@@ -860,7 +860,7 @@ async function unlock(code, remember) {
   for (let i = 0; i < TRIPS.length; i++) {
     const t = TRIPS[i]; if (!t.locked) continue;
     let enc;
-    try { const r = await fetch("prive/" + encodeURIComponent(t.id) + ".enc.json"); if (!r.ok) throw 0; enc = await r.json(); }
+    try { const r = await fetch("prive/" + encodeURIComponent(t.id) + ".enc.json", { cache: "no-cache" }); if (!r.ok) throw 0; enc = await r.json(); }
     catch (e) { throw new Error("reseau"); }
     let text;
     try { text = await CarnetBuild.decrypt(enc, code); } catch (e) { throw new Error("code"); }
@@ -1000,7 +1000,7 @@ function toast(msg, ms) { const t = $("#toast"); t.textContent = msg; t.hidden =
 
 /* ---------- démarrage ---------- */
 (async () => {
-  await Promise.all((self.VOYAGES || []).flatMap(id => [loadScript("voyages/" + encodeURIComponent(id) + ".js"), loadScript("photos/" + encodeURIComponent(id) + "/photos.js")]));
+  await Promise.all((self.VOYAGES || []).flatMap(id => [loadScript("voyages/" + encodeURIComponent(id) + ".js?v=" + (self.APPV || "")), loadScript("photos/" + encodeURIComponent(id) + "/photos.js?v=" + (self.APPV || ""))]));
   TRIPS = (self.VOYAGES || []).map(id => self.TRIPS && self.TRIPS[id]).filter(t => t && ((t.days && t.days.length) || (t.places && t.places.length)));
   if (!TRIPS.length) { $("#app").innerHTML = `<header class="homehead"><div><h1>Mes voyages</h1><p>Aucun voyage trouvé. Vérifie la liste dans voyages.js.</p></div></header>`; return; }
   try { await DB.open(); await migrateOld(); } catch (e) { DB.ok = false; }
