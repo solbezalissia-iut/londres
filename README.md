@@ -30,7 +30,13 @@ En accès privé, dans Budget, Comptes, Infos et sur le côté du programme : ta
 
 Onglet **Comptes** : entre les prénoms des voyageurs, puis ajoute chaque dépense (quoi, combien, en € ou en £, qui a payé, pour qui). Chaque dépense est partagée en parts égales entre les personnes cochées, et le site calcule les soldes et qui doit combien à qui. « Marquer comme remboursé » enregistre le remboursement.
 
-Les réservations déjà payées (vols, hôtel, transferts) sont proposées en haut : choisis qui les a payées pour les ajouter. Le taux livre → euro est modifiable.
+Les réservations (vols, hôtel, transferts) sont proposées en haut : choisis qui les a payées, ou **« Pas encore payé »**. Une dépense pas encore payée compte dans le total mais pas dans les remboursements ; quand quelqu'un la paie, modifie-la et choisis qui a payé.
+
+Deux façons de rembourser :
+- **Par dépense** : sous chaque dépense, « Léa doit X € à Alissia » avec **Marquer remboursé** (et un second appui pour annuler).
+- **Au total** : « Pour être quittes » calcule le minimum de virements pour tout solder, avec **Marquer comme remboursé**.
+
+Le taux livre → euro est modifiable.
 
 Les comptes sont enregistrés sur l'appareil où tu les saisis (comme les photos) et inclus dans la sauvegarde : tiens-les sur un seul téléphone, ou passe la sauvegarde à l'autre.
 

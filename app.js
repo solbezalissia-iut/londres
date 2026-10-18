@@ -667,9 +667,12 @@ const fmtAmt = (n, cur) => cur === "£" ? "£" + n.toLocaleString("fr-FR", { min
 function balances(c) {
   const b = Object.fromEntries(c.people.map(p => [p.id, { paid: 0, share: 0 }]));
   for (const e of c.exp) {
+    if (!b[e.paidBy]) continue; // « pas encore payé » : ne compte pas dans les remboursements
     const v = toEur(e, c), who = (e.split || []).filter(id => b[id]);
-    if (b[e.paidBy]) b[e.paidBy].paid += v;
+    b[e.paidBy].paid += v;
     who.forEach(id => b[id].share += v / who.length);
+    // remboursements faits pour cette dépense : comme un virement du débiteur vers le payeur
+    (e.settled || []).forEach(id => { if (id !== e.paidBy && who.includes(id)) { b[id].paid += v / who.length; b[e.paidBy].paid -= v / who.length; } });
   }
   return b;
 }
@@ -697,24 +700,37 @@ function comptesView() {
       <button class="btn solid" type="submit">Commencer les comptes</button></form>
   </section></main>`;
   const b = balances(c), tr = settle(c, b), total = c.exp.filter(e => e.kind !== "rembt").reduce((a, e) => a + toEur(e, c), 0);
+  const unpaid = c.exp.filter(e => e.kind !== "rembt" && !c.people.some(p => p.id === e.paidBy)), unpaidTot = unpaid.reduce((a, e) => a + toEur(e, c), 0);
+  const debtsOf = e => { // qui doit combien au payeur, pour cette dépense
+    if (e.kind === "rembt" || !c.people.some(p => p.id === e.paidBy)) return "";
+    const who = (e.split || []).filter(id => c.people.some(p => p.id === id)), share = toEur(e, c) / (who.length || 1);
+    const l = who.filter(id => id !== e.paidBy);
+    return l.length ? `<span class="debts">${l.map(id => { const done = (e.settled || []).includes(id);
+      return `<span class="debt${done ? " done" : ""}"><span>${esc(nameOf(c, id))} doit ${euro(share)} à ${esc(nameOf(c, e.paidBy))}</span><button class="chip${done ? " ok" : ""}" data-sexp="${e.id}|${id}">${done ? ic("check") + "Remboursé" : "Marquer remboursé"}</button></span>`; }).join("")}</span>` : "";
+  };
   const pendingPaid = (trip.paid || []).map((x, i) => [x, i]).filter(([, i]) => !c.exp.some(e => e.paidRef === i));
   const exps = c.exp.slice().sort((x, y) => (y.date || "").localeCompare(x.date || "") || y.created - x.created);
   return `<main class="full"><section style="min-width:0;max-width:760px">
    <h2 class="pageh" style="margin-top:8px">Comptes</h2>
    <p class="daysub">Chaque dépense est partagée en parts égales entre les personnes cochées. Les montants en livres sont convertis en euros.</p>
    <div class="sum"><div><span class="small">Dépenses du groupe</span><span class="big">${euro(total)}</span></div>
-     <div><span class="small">Par personne</span><span class="big">${euro(c.people.length ? total / c.people.length : 0)}</span></div></div>
+     <div><span class="small">Par personne</span><span class="big">${euro(c.people.length ? total / c.people.length : 0)}</span></div>
+     ${unpaid.length ? `<div><span class="small">Pas encore payé</span><span class="big" style="color:var(--pink-fg)">${euro(unpaidTot)}</span></div>` : ""}</div>
    <div class="toolbar"><button class="btn solid" data-addexp>${I.plus}Ajouter une dépense</button></div>
    <div style="margin-top:16px">${convHTML()}</div>
 
    ${pendingPaid.length ? `<div class="card panel" style="margin-top:16px"><h3>${tile("receipt", "butter")}Réservations à attribuer</h3>
-     <p class="small" style="margin:-4px 0 10px">Indique qui a payé chaque réservation pour l'ajouter aux comptes.</p>
+     <p class="small" style="margin:-4px 0 10px">Indique qui a payé chaque réservation (ou « Pas encore payé ») pour l'ajouter aux comptes.</p>
      ${pendingPaid.map(([x, i]) => `<div class="brow"><b>${esc(x[0])}</b><span class="bp">${euro(x[2])}</span>
-       <span class="bd"><select data-paidsel="${i}" aria-label="Qui a payé ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Payé par…</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></span><span></span></div>`).join("")}
+       <span class="bd"><select data-paidsel="${i}" aria-label="Qui a payé ${esc(x[0])}" style="font:inherit;font-weight:700;padding:8px 10px;border-radius:12px;border:0;background:var(--bg);color:var(--fg);margin-top:6px"><option value="">Payé par…</option>${c.people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}<option value="none">Pas encore payé</option></select></span><span></span></div>`).join("")}
    </div>` : ""}
 
    <div class="card panel" style="margin-top:16px"><h3>${tile("scale", "mint")}Soldes</h3>
-     ${c.people.map(p => { const s = b[p.id].paid - b[p.id].share, r = Math.round(s * 100) / 100;
+     ${(() => { // soldes arrondis au centime, qui s'équilibrent exactement
+       const rs = c.people.map(p => Math.round((b[p.id].paid - b[p.id].share) * 100));
+       const diff = -rs.reduce((x, y) => x + y, 0); if (diff && rs.length) { let k = 0; rs.forEach((v, i) => { if (Math.abs(v) > Math.abs(rs[k])) k = i; }); rs[k] += diff; }
+       c.people.forEach((p, i) => b[p.id].round = rs[i] / 100); return ""; })()}
+     ${c.people.map(p => { const r = b[p.id].round;
        return `<div class="brow"><b>${esc(p.name)}</b><span class="bp" style="color:${r > 0 ? "var(--mint-fg)" : r < 0 ? "var(--peach-fg)" : "inherit"}">${r > 0 ? "+" : ""}${euro(r)}</span>
          <span class="bd">a payé ${euro(b[p.id].paid)}, sa part ${euro(b[p.id].share)}</span><span class="bs"><span class="pill ${r > 0 ? "free" : r < 0 ? "book" : "out"}">${r > 0 ? "doit recevoir" : r < 0 ? "doit rembourser" : "à l'équilibre"}</span></span></div>`; }).join("")}
    </div>
@@ -728,8 +744,8 @@ function comptesView() {
    <h3 style="margin:22px 0 10px;font-size:18px">Dépenses</h3>
    ${exps.length ? `<div class="card rows">${exps.map(e => `<div class="brow" style="cursor:pointer" data-editexp="${e.id}" role="button" tabindex="0">
        <b>${e.kind === "rembt" ? "Remboursement : " : ""}${esc(e.title)}</b><span class="bp">${fmtAmt(e.amount, e.cur)}</span>
-       <span class="bd">Payé par ${esc(nameOf(c, e.paidBy))}${e.date ? ", le " + esc(dayLabel(e.date)) : ""}${(e.split || []).length < c.people.length ? `, pour ${e.split.map(id => esc(nameOf(c, id))).join(" et ")}` : ", pour tout le monde"}</span>
-       <span class="bs small">${e.cur === "£" ? "≈ " + euro(toEur(e, c)) : ""}</span></div>`).join("")}</div>`
+       <span class="bd">${c.people.some(p => p.id === e.paidBy) ? "Payé par " + esc(nameOf(c, e.paidBy)) : "Pas encore payé"}${e.date ? ", le " + esc(dayLabel(e.date)) : ""}${(e.split || []).length < c.people.length ? `, pour ${e.split.map(id => esc(nameOf(c, id))).join(" et ")}` : ", pour tout le monde"}</span>
+       <span class="bs small">${c.people.some(p => p.id === e.paidBy) ? (e.cur === "£" ? "≈ " + euro(toEur(e, c)) : "") : `<span class="pill book">Pas encore payé</span>`}</span>${debtsOf(e)}</div>`).join("")}</div>`
      : `<div class="card empty">${tile("receipt", "peach")}<p><b>Aucune dépense pour l'instant.</b><br>Ajoute un repas, un billet ou un taxi : le site calcule tout seul qui doit combien.</p></div>`}
 
    <div class="card panel" style="margin-top:16px"><h3>${tile("users", "lilac")}Voyageurs et taux</h3>
@@ -752,7 +768,7 @@ function openExp(e) {
   $("#eAmount").value = e ? e.amount : "";
   $("#eCur").value = e ? e.cur : "€";
   $("#eDate").value = e ? e.date || "" : (trip.days.some(d => d.date === isoToday()) ? isoToday() : "");
-  $("#ePaid").innerHTML = c.people.map(p => `<option value="${p.id}"${e && e.paidBy === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  $("#ePaid").innerHTML = c.people.map(p => `<option value="${p.id}"${e && e.paidBy === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("") + `<option value=""${e && !c.people.some(p => p.id === e.paidBy) ? " selected" : ""}>Pas encore payé</option>`;
   const sp = e ? e.split : c.people.map(p => p.id);
   $("#eSplit").innerHTML = c.people.map(p => `<label><input type="checkbox" value="${p.id}" ${sp.includes(p.id) ? "checked" : ""}><span>${esc(p.name)}</span></label>`).join("");
   $("#eDel").hidden = !e; $("#eDel").textContent = "Supprimer"; $("#eDel").dataset.confirm = "";
@@ -774,6 +790,7 @@ $("#eForm").onsubmit = ev => {
   if (!(amount > 0)) return $("#eErr").textContent = "Indique un montant supérieur à 0.";
   if (!split.length) return $("#eErr").textContent = "Coche au moins une personne pour partager la dépense.";
   const e = { ...(editingExp || { id: uid("e"), created: Date.now(), kind: "dep" }), title, amount, cur: $("#eCur").value, paidBy: $("#ePaid").value, split, date: $("#eDate").value };
+  if (editingExp && editingExp.paidBy !== e.paidBy) e.settled = []; // nouveau payeur : remboursements à refaire
   c.exp = c.exp.filter(x => x.id !== e.id).concat(e); setC(c);
   edlg.close(); refresh(); toast(editingExp ? "Dépense modifiée" : "Dépense ajoutée");
 };
@@ -795,12 +812,19 @@ function bindComptes(v) {
   if (r) r.onchange = () => { const x = parseFloat(String(r.value).replace(",", ".")); if (x > 0) { ls.set(RATE_KEY, { v: x, manual: true }); refresh(); } };
   $$("[data-paidsel]", v).forEach(s => s.onchange = () => {
     if (!s.value) return; const i = +s.dataset.paidsel, x = trip.paid[i], c = getC();
-    c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value, split: c.people.map(p => p.id), date: "", paidRef: i });
+    c.exp.push({ id: uid("e"), created: Date.now(), kind: "dep", title: x[0], amount: x[2], cur: "€", paidBy: s.value === "none" ? "" : s.value, split: c.people.map(p => p.id), date: "", paidRef: i });
     setC(c); refresh(); toast("Ajouté aux comptes");
   });
   $$("[data-editexp]", v).forEach(row => {
     const go = () => openExp(getC().exp.find(e => e.id === row.dataset.editexp));
-    row.onclick = go; row.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } };
+    row.onclick = ev => { if (!ev.target.closest("[data-sexp]")) go(); };
+    row.onkeydown = ev => { if (ev.target === row && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); go(); } };
+  });
+  $$("[data-sexp]", v).forEach(btn => btn.onclick = ev => {
+    ev.stopPropagation();
+    const [eid, pid] = btn.dataset.sexp.split("|"), c = getC(), e = c.exp.find(x => x.id === eid); if (!e) return;
+    const s = new Set(e.settled || []); const was = s.has(pid); was ? s.delete(pid) : s.add(pid); e.settled = [...s];
+    setC(c); refresh(); toast(was ? "Remboursement annulé" : "Remboursement enregistré");
   });
 }
 
