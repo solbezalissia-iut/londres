@@ -1,5 +1,8 @@
 /* ============================================================
-   Programme du voyage — modifie ce fichier pour changer le site.
+   Voyage : Londres, 21 → 30 mai 2027
+   Modifie ce fichier pour changer le programme de ce voyage.
+   (Pour créer un nouveau voyage : copie modele.js, voir README.)
+
    Chaque étape :
      t     heure          n    nom            addr  adresse
      d     description    q    recherche Google Maps
@@ -7,17 +10,30 @@
      mode  "walk" si le trajet se fait à pied (sinon transports)
      tags  [["texte","free|price|book|out|warn"]]
      major étape principale   adj  ajustement expliqué   warn  alerte
-     tk    true = on peut y ranger des billets
+     tk    1 = on peut y ranger des billets
+   Ne change pas le nom (n) d'une étape où tu as déjà mis des photos
+   ou des billets : ils y sont rattachés par ce nom.
    ============================================================ */
-window.TRIP = {
+(self.TRIPS = self.TRIPS || {}).londres = {
+  id: "londres",
   title: "Londres",
+  country: "Royaume-Uni",
+  badge: "Londres",
+  color: "#10196b",
+  accent: "#d4231e",
   start: "2027-05-21",
   end: "2027-05-30",
+  city: "London",
+  currency: "£",
+  summary: "Dix jours entre musées gratuits, marchés, rooftops et Harry Potter.",
   hotel: { name: "Hôtel à Acton", station: "Acton Main Line", q: "Acton Main Line Station" },
-  flights: { arr: "Ven 21 mai · atterrissage LGW 16h10", dep: "Dim 30 mai · décollage LGW 7h35" }
-};
+  facts: [
+    ["Hôtel", "Acton Main Line (2 min à pied)"],
+    ["Arrivée", "ven. 21 mai, Gatwick 16h10"],
+    ["Départ", "dim. 30 mai, Gatwick 7h35"]
+  ],
 
-window.DAYS = [
+days: [
 { id:"j1", date:"2027-05-21", dow:"Ven", label:"21 mai", title:"Arrivée", line:"Elizabeth line", c:"#6950a1",
   sub:"Atterrissage à Gatwick, installation à l'hôtel et petite balade au calme.",
   notes:[["Paie tous tes trajets avec la même carte bancaire sans contact (ou ton téléphone), dès la gare de Gatwick. Pas besoin d'acheter d'Oyster.","info"]],
@@ -82,7 +98,7 @@ window.DAYS = [
     d:"La plus haute terrasse panoramique gratuite d'Europe, au 58e étage. Compter 45 min.",
     how:["Columbia Road → Shoreditch High Street, 10 min à pied.","Descends tout droit vers le sud par Shoreditch High Street puis Bishopsgate : 20-25 min à pied. Ou un bus direction Liverpool Street / Bank (le lien Maps te donne le numéro).","Prends ton QR code et une pièce d'identité."]},
    {t:"11h00",n:"The Garden at 120",addr:"120 Fenchurch Street, EC3M 5BA",q:"The Garden at 120 Fenchurch Street",tags:[["Gratuit","free"],["Accès libre","out"]],mode:"walk",
-    d:"Jardin sur le toit, sans réservation. Vérifie l'ouverture du dimanche avant.",
+    d:"Jardin sur le toit, sans réservation. Ouvert jusqu'à 17h le week-end.",
     how:["Bishopsgate → Fenchurch Street vers le sud : 7 min à pied."]},
    {t:"11h30",n:"St Dunstan in the East",addr:"St Dunstan's Hill, EC3R 5DD",q:"St Dunstan in the East",tags:[["Gratuit","free"]],mode:"walk",
     d:"Église en ruine envahie par un jardin.",how:["Descends vers la Tamise par Mincing Lane puis St Dunstan's Hill : 6 min à pied."]},
@@ -105,7 +121,7 @@ window.DAYS = [
     adj:"St Paul's était « JSP ». Un dimanche on ne peut pas le visiter, donc vue extérieure seulement.",
     how:["Traverse le Millennium Bridge juste devant la Tate : 5 min jusqu'à St Paul's."]},
    {t:"17h00",n:"Sky Garden",addr:"20 Fenchurch Street, EC3M 8AF",q:"Sky Garden London",tags:[["Gratuit","free"],["À réserver","book"]],major:1,tk:1,
-    d:"Jardin intérieur au 35e étage avec terrasse. Ouvert jusqu'à 21h le week-end.",
+    d:"Jardin intérieur au 35e étage. Le week-end, la terrasse extérieure ferme à 18h (le jardin à 21h) : arrive à l'heure pour en profiter.",
     how:["Central line St Paul's → Bank, 1 arrêt, puis 8 min à pied par Lombard Street et Fenchurch Street.","Ou 20 min à pied par Cheapside et Cornhill.","Pièce d'identité avec photo et QR code demandés à l'entrée."]},
    {t:"18h30",n:"Leadenhall Market",addr:"Gracechurch Street, EC3V 1LT",q:"Leadenhall Market",tags:[["Gratuit","free"]],mode:"walk",
     d:"Le marché couvert victorien, décor du Chaudron Baveur dans Harry Potter. Boutiques fermées le dimanche, mais l'architecture est là.",
@@ -183,9 +199,9 @@ window.DAYS = [
    {t:"10h00",n:"Camden Market & Camden Town",addr:"Camden Lock Place, NW1 8AF",q:"Camden Market",tags:[["Gratuit","free"]],major:1,
     d:"Les stands, les boutiques alternatives, l'écluse de Camden Lock.",
     how:["Elizabeth line direction est d'Acton Main Line à Tottenham Court Road : ~14 min.","Northern line direction nord (Edgware ou High Barnet, branche Charing Cross) : 5 arrêts jusqu'à Camden Town, ~8 min.","Remonte Camden High Street puis Chalk Farm Road : 5 min jusqu'au marché."]},
-   {t:"11h30",n:"Babylon Park",addr:"Hawley Wharf, Camden Market, NW1",q:"Babylon Park Camden",tags:[["dès ~£8,75","price"],["À décider","out"]],tk:1,mode:"walk",
+   {t:"11h30",n:"Babylon Park",addr:"Hawley Wharf, Camden Market, NW1",q:"Babylon Park Camden",tags:[["Entrée gratuite","free"],["Jeux payants","out"]],tk:1,mode:"walk",
     d:"Parc d'attractions couvert sur 3 étages : mini-golf, auto-tamponneuses, arcade.",
-    adj:"Déplacé ici depuis la journée immersive : c'est dans Camden Market. Bracelet illimité ~£25.",
+    adj:"Déplacé ici depuis la journée immersive : c'est dans Camden Market. Entrée libre, on paie les jeux (bracelet illimité ~£25).",
     how:["Dans Hawley Wharf, côté canal du marché : 3 min à pied."]},
    {t:"13h00",n:"Déjeuner au marché",addr:"Camden Market",q:"Camden Market food",mode:"walk",d:"La street food de Camden Market.",how:["Sur place."]},
    {t:"14h30",n:"Regent's Park",addr:"Queen Mary's Gardens, Inner Circle, NW1",q:"Queen Mary's Gardens Regent's Park",tags:[["Gratuit","free"]],major:1,mode:"walk",
@@ -204,8 +220,8 @@ window.DAYS = [
 },
 
 { id:"j7", date:"2027-05-27", dow:"Jeu", label:"27 mai", title:"Oxford Street & expériences", line:"Central line", c:"#e1251b",
-  sub:"Outernet, les grands magasins d'Oxford Street, puis l'expo Pixar à Wembley si elle est encore ouverte.",
-  notes:[["Twist Museum, Paradox Museum et Serial Killer sont notés « Non » dans ton tableau. Babylon Park passe mercredi (à Camden).","info"],["Mundo Pixar a été prolongé « jusqu'en janvier 2027 ». Il sera probablement fermé en mai 2027 : vérifie avant de réserver. Sinon, l'après-midi est libre.","warn"]],
+  sub:"Outernet, les grands magasins d'Oxford Street, puis les salons dorés de la Wallace Collection.",
+  notes:[["Twist Museum, Paradox Museum et Serial Killer sont notés « Non » dans ton tableau. Babylon Park passe mercredi (à Camden).","info"],["Mundo Pixar (Wembley) ferme définitivement le 3 janvier 2027 : il a été retiré du programme. À la place, la Wallace Collection, gratuite et à 5 min de Selfridges.","warn"]],
   stops:[
    {t:"10h00",n:"Outernet London",addr:"Denmark Street, WC2H",q:"Outernet London",tags:[["Gratuit","free"]],major:1,
     d:"Les écrans géants immersifs à 360°.",
@@ -221,13 +237,13 @@ window.DAYS = [
     how:["Juste en face, 3 min vers l'ouest sur Oxford Street."]},
    {t:"13h15",n:"Déjeuner",addr:"Autour de Bond Street",q:"St Christopher's Place London",mode:"walk",
     d:"St Christopher's Place, petite rue piétonne pleine de restos, juste en face de Selfridges.",how:["2 min à pied."]},
-   {t:"14h30",n:"Mundo Pixar Experience",addr:"Fulton Road, Wembley Park, HA9 0TF",q:"Mundo Pixar Experience Wembley Park",tags:[["~£24 – £31","price"],["À vérifier","warn"]],major:1,tk:1,
-    d:"14 univers Pixar grandeur nature, environ 1h de visite.",
-    adj:"Déplacé l'après-midi pour regrouper le trajet vers Wembley.",
-    how:["Bond Street → Jubilee line direction Stanmore : ~15 min jusqu'à Wembley Park.","Sortie vers Olympic Way puis Fulton Road : 5 min à pied."]},
-   {t:"17h00",n:"Soirée libre",addr:"Westfield London, Shepherd's Bush",q:"Westfield London",
+   {t:"14h30",n:"Wallace Collection",addr:"Hertford House, Manchester Square, W1U 3BN",q:"Wallace Collection",tags:[["Gratuit","free"],["Ferme 17h","out"]],major:1,mode:"walk",
+    d:"Un hôtel particulier rempli de tableaux, d'armures et de mobilier royal français. Joli café sous verrière.",
+    adj:"Remplace Mundo Pixar, fermé depuis janvier 2027.",
+    how:["Depuis St Christopher's Place, remonte vers le nord jusqu'à Manchester Square : 5 min à pied."]},
+   {t:"16h30",n:"Soirée libre",addr:"Westfield London, Shepherd's Bush",q:"Westfield London",
     d:"Westfield London est à 10 min de l'hôtel si tu veux le caser ici.",
-    how:["Depuis Wembley Park : Jubilee → Bond Street, puis Central line direction ouest → Shepherd's Bush (~35 min au total)."]}
+    how:["Marche jusqu'à Bond Street (8 min).","Central line direction ouest → Shepherd's Bush, ~10 min."]}
   ],
   back:["Depuis Westfield : Central line Shepherd's Bush → North Acton / East Acton puis bus, ou Uber (~10 min).","Depuis le centre : Elizabeth line → Acton Main Line."]
 },
@@ -267,7 +283,7 @@ window.DAYS = [
 
 { id:"j9", date:"2027-05-29", dow:"Sam", label:"29 mai", title:"Harry Potter Studio Tour", line:"Bakerloo line", c:"#b36305",
   sub:"Journée complète aux studios Warner Bros. à Leavesden. Le soir, préparation des bagages.",
-  notes:[["Réservation obligatoire des semaines à l'avance, aucun billet vendu sur place. Le samedi part en premier.","warn"],["Le vol est à 7h35 demain : couche-toi tôt et réserve ton taxi ce soir.","info"]],
+  notes:[["Réservation obligatoire des semaines à l'avance, aucun billet vendu sur place. C'est le samedi d'un week-end férié au Royaume-Uni : réserve dès l'ouverture des ventes.","warn"],["Le vol est à 7h35 demain : couche-toi tôt et réserve ton taxi ce soir.","info"]],
   stops:[
    {t:"07h15",n:"Hôtel → Euston",addr:"Euston Station, NW1 2RT",q:"Euston Station",
     d:"Environ 35 min.",
@@ -301,12 +317,13 @@ window.DAYS = [
   ],
   back:[]
 }
-];
+],
 
-window.BUDGET=[
+/* Budget : [activité, prix affiché, remarque, oui|non|jsp, min, max, jour] */
+budget: [
  ["Harry Potter Studio Tour","~£53 – £65","Navette incluse","oui",53,65,"Sam 29"],
  ["London Eye","~£29 – £33","Fast track ~£44+","oui",29,33,"Lun 24"],
- ["Mundo Pixar Experience","~£24 – £31","Probablement fermé en mai 2027","oui",24,31,"Jeu 27"],
+ ["Mundo Pixar Experience","~£24 – £31","Fermé définitivement le 3 janvier 2027","non",24,31,"—"],
  ["Croisière Westminster → Greenwich","~£10 – £13,50","Moins cher en sans contact","oui",10,13.5,"Ven 28"],
  ["Uber Boat Canary Wharf → Westminster","~£10 – £13,50","Retour du vendredi","oui",10,13.5,"Ven 28"],
  ["Téléphérique de Greenwich","~£6","Aller simple, ~£12 A/R","oui",6,6,"Ven 28"],
@@ -323,21 +340,35 @@ window.BUDGET=[
  ["Twist Museum","~£19 – £26","Oxford Street","non",19,26,"—"],
  ["Paradox Museum","~£24 – £25,50","Face à Harrods","non",24,25.5,"—"],
  ["Serial Killer Experience","~£23 – £30","18+","non",23,30,"—"]
-];
+],
 
-window.RESA=[
+/* À réserver : [identifiant, nom, détail] */
+resa: [
  ["hp","Harry Potter Studio Tour","Sam 29 · des semaines à l'avance"],
  ["eye","London Eye","Lun 24 · créneau 15h"],
  ["h22","Horizon 22","Dim 23 · 10h · sortie des billets le lundi"],
  ["sky","Sky Garden","Dim 23 · 17h · sortie des billets le lundi"],
- ["pix","Mundo Pixar (si encore ouvert)","Jeu 27 · 14h30"],
  ["uber","Uber / taxi pour Gatwick à 4h15","Dim 30 · à réserver la veille"]
-];
+],
 
-window.BONUS=[
+/* Idées en plus : [nom, description, recherche Maps] */
+bonus: [
  ["Richmond Park","Demi-journée au sud-ouest, les cerfs en liberté.","Richmond Park"],
  ["God's Own Junkyard","Néons à Walthamstow, à combiner avec Walthamstow Market.","God's Own Junkyard"],
  ["Hampstead Pergola & Kenwood House","Jolie balade au nord de Londres.","Hampstead Pergola"],
  ["Sea Life London","À coupler avec le London Eye le lundi 24.","Sea Life London Aquarium"],
  ["Life-Size Monopoly","Pop-up éphémère, adresse à confirmer selon la saison.","Monopoly Lifesized London"]
-];
+],
+
+infos: [
+ ["Payer les transports","Métro, bus, Elizabeth line, Overground, DLR, téléphérique et bateaux Uber Boat : passe ta carte bancaire sans contact (ou ton téléphone) sur le lecteur jaune, à l'entrée et à la sortie. Utilise toujours la même carte : le plafond par jour et par semaine s'applique tout seul. L'hôtel est en zone 3."],
+ ["Hôtel","À 2 min à pied d'Acton Main Line (Elizabeth line). Direct pour Paddington (7 min), Bond Street (12 min), Tottenham Court Road (14 min), Liverpool Street (20 min), Whitechapel et Canary Wharf."],
+ ["Aéroport","Aller : Thameslink Gatwick → Farringdon (~50 min), puis Elizabeth line → Acton Main Line (~15 min). Retour : Uber ou taxi réservé à 4h15, 45 à 60 min jusqu'à Gatwick."],
+ ["Applis utiles","Citymapper ou Google Maps pour les trajets en direct, TfL Go pour les perturbations, Uber pour le taxi du dernier jour et les bateaux Thames Clippers."],
+ ["À savoir","Prise électrique britannique (type G) : prends un adaptateur. Passeport obligatoire, et autorisation de voyage électronique (ETA) à demander en ligne avant le départ. Le lundi 31 mai 2027 est férié au Royaume-Uni : le samedi 29 sera très chargé partout."]
+],
+
+free: "British Museum, National Gallery, Natural History Museum, Science Museum, Tate Modern, National Maritime Museum, Wallace Collection, St James's Park, Hyde Park, Kensington Gardens, Regent's Park, Greenwich Park, Primrose Hill, Borough, Greenwich, Leadenhall, Columbia Road et Camden (achats en sus), Big Ben, relève de la garde, Westminster Bridge, Tower Bridge à pied, Sky Garden, Horizon 22, The Garden at 120, Outernet, Harrods, Hamleys, Disney Store, Selfridges, M&M's World, LEGO Store, Westfield.",
+
+footer: "Horaires et prix indicatifs relevés en 2026 : vérifie les sites officiels avant de réserver."
+};
